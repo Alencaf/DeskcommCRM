@@ -381,6 +381,34 @@ organização onde ninguém responde.
 | `pnpm test:unit` | **574 de 575 arquivos verdes** — 6403 casos passando |
 | `pnpm build` | `BUILD_EXIT=0` |
 | `pnpm release:conferir` | fragmento aceito (`1.9.1 + patch = 1.9.2`) |
+| `pnpm lint:channels` | ok (60 arquivos de dívida conhecida, nenhum novo) |
+| **`pnpm test:db`** | **137 de 137 arquivos, 1050 casos verdes** |
+
+### O invariante novo nasceu vermelho — e o motivo era o fixture, não o portão
+
+Primeira rodada: `6 failed`, todos com `duplicate key ... "ai_agents_name_unique"`.
+A constraint é **por organização**, e os sete cenários dividem a mesma org — o
+literal `'Agente Portão'` matava o segundo insert em 23505, e seis casos ficavam
+vermelhos **sem nunca chegar a exercitar o portão**. Um vermelho que lê como
+defeito e é erro de fixture.
+
+Conserto: nome próprio por agente. Controle anexado ao commit —
+`git diff | grep -E "^[+-].*(expect|it\()"` devolve **vazio**: nenhuma asserção e
+nenhum título de caso mudaram. (O commit precisou de
+`DESKCOMM_GOV_INVARIANTS_EDIT=1`: a catraca de `tests/invariants/**` bloqueia
+edição de invariante, e está certa em bloquear — a exceção está justificada na
+mensagem do commit.)
+
+### Sabotagem do portão (com previsão declarada ANTES de rodar)
+
+Revertido o predicado do drain para o antigo (existência de linha de membro):
+
+| previsão | medido |
+|---|---|
+| 2 falhas: `MEMBRO está pausado` e `FALLBACK está pausado` | **exatamente essas duas** |
+
+Os outros 5 casos e os 136 arquivos restantes seguiram verdes — a guarda morde
+onde deve e só onde deve. `drain.ts` restaurado (diff vazio contra o commit).
 
 A única suíte vermelha é `lib/ai/dispatcher/rate-limit.test.ts` (5 casos) — o
 vermelho conhecido e **alheio** que o `CLAUDE.md` documenta: o `.env.local` tem
