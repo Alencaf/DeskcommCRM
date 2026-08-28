@@ -95,14 +95,18 @@ async function montarCenario(nome: string): Promise<Cenario> {
  */
 async function criarAgente(
   sessionId: string,
-  opts: { publicado: boolean },
+  opts: { publicado: boolean; nome: string },
 ): Promise<string> {
   const agent = proximoId();
   const version = proximoId();
+  // O nome vem de fora porque `ai_agents_name_unique` é por organização, e
+  // todos os cenários deste arquivo dividem a mesma org: um literal fixo aqui
+  // faz o segundo insert morrer em 23505 e o caso nunca chega a exercitar o
+  // portão — ele fica vermelho por erro de fixture, que lê como defeito.
   await pool.query(
     `insert into ai_agents (id, organization_id, name, system_prompt, kind)
-     values ($1, $2, 'Agente Portão', 'você é um atendente', 'mcp_agent')`,
-    [agent, ORG],
+     values ($1, $2, $3, 'você é um atendente', 'mcp_agent')`,
+    [agent, ORG, `Agente Portão ${opts.nome}`],
   );
   await pool.query(
     `insert into ai_agent_versions (id, organization_id, agent_id, version_number, system_prompt,
@@ -180,14 +184,14 @@ afterAll(async () => {
 describe("portão de capacidade do drain — mede quem EXECUTA", () => {
   it("agente publicado para a sessão: o turno é enfileirado", async () => {
     const c = await montarCenario("publicado");
-    await criarAgente(c.session, { publicado: true });
+    await criarAgente(c.session, { publicado: true, nome: "publicado" });
 
     expect(await drenaEGeraJob(c)).toBe(true);
   });
 
   it("agente PAUSADO e sem roteador: nada é enfileirado — pausar tem que parar o gasto", async () => {
     const c = await montarCenario("pausado");
-    await criarAgente(c.session, { publicado: false });
+    await criarAgente(c.session, { publicado: false, nome: "pausado" });
 
     expect(await drenaEGeraJob(c)).toBe(false);
   });
@@ -196,7 +200,7 @@ describe("portão de capacidade do drain — mede quem EXECUTA", () => {
     // O defeito: a linha em ai_router_members sobrevive à pausa do agente, e o
     // portão a contava como "existe quem atenda".
     const c = await montarCenario("membro-pausado");
-    const membro = await criarAgente(c.session, { publicado: false });
+    const membro = await criarAgente(c.session, { publicado: false, nome: "membro-pausado" });
     await criarRouter(c.session, { membro });
 
     expect(await drenaEGeraJob(c)).toBe(false);
@@ -204,7 +208,7 @@ describe("portão de capacidade do drain — mede quem EXECUTA", () => {
 
   it("roteador ativo com MEMBRO publicado: o turno é enfileirado", async () => {
     const c = await montarCenario("membro-publicado");
-    const membro = await criarAgente(c.session, { publicado: true });
+    const membro = await criarAgente(c.session, { publicado: true, nome: "membro-publicado" });
     // O membro é publicado, mas a versão dele aponta para ESTA sessão, o que
     // também faria `tem_agente` passar. Um router cujo membro é publicado é o
     // caso que tem de abrir o portão de qualquer um dos dois braços.
@@ -215,7 +219,7 @@ describe("portão de capacidade do drain — mede quem EXECUTA", () => {
 
   it("roteador ativo cujo FALLBACK está pausado: nada é enfileirado", async () => {
     const c = await montarCenario("fallback-pausado");
-    const fallback = await criarAgente(c.session, { publicado: false });
+    const fallback = await criarAgente(c.session, { publicado: false, nome: "fallback-pausado" });
     await criarRouter(c.session, { fallback });
 
     expect(await drenaEGeraJob(c)).toBe(false);
@@ -223,7 +227,7 @@ describe("portão de capacidade do drain — mede quem EXECUTA", () => {
 
   it("roteador ativo com FALLBACK publicado: o turno é enfileirado", async () => {
     const c = await montarCenario("fallback-publicado");
-    const fallback = await criarAgente(c.session, { publicado: true });
+    const fallback = await criarAgente(c.session, { publicado: true, nome: "fallback-publicado" });
     await criarRouter(c.session, { fallback });
 
     expect(await drenaEGeraJob(c)).toBe(true);
@@ -234,7 +238,7 @@ describe("portão de capacidade do drain — mede quem EXECUTA", () => {
     // `v.status='published'` sozinho não basta — o `archived_at is null` do
     // portão é que segura.
     const c = await montarCenario("arquivado");
-    const agente = await criarAgente(c.session, { publicado: true });
+    const agente = await criarAgente(c.session, { publicado: true, nome: "arquivado" });
     await pool.query(`update ai_agents set archived_at = now() where id = $1`, [agente]);
 
     expect(await drenaEGeraJob(c)).toBe(false);

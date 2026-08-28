@@ -326,3 +326,89 @@ são dado do usuário, e apagá-las é decisão dele — não minha.
 O que a engenharia deve a isto: a tela do AGENTE não menciona que existem duas
 camadas acima do prompt dele. Quem publica um agente vê só o próprio texto. Essa é
 uma lacuna de produto real, e está fora deste conserto.
+
+---
+
+## PROVA EM TELA (Playwright, app local em modo produção)
+
+Ambiente: `pnpm build` + `pnpm start` na 3000, Supabase local (`54321/54322`), login
+real por senha + TOTP como `e2e-admin@deskcomm.test`.
+
+Cenário montado para reproduzir o mundo real da VPS:
+
+| agente | `kind` | `is_active` | publicado |
+|---|---|---|---|
+| Atendente Publicado | mcp_agent | **false** (como "Novo agente" grava) | sim |
+| Atendente Pausado | mcp_agent | **true** (a pausa não desliga) | não |
+| Bot Padrão E2E | rag_bot | true | não |
+
+### Com um agente publicado
+
+- **Tela `/app/ai/agents`:** `Atendente Pausado → Rascunho`,
+  `Atendente Publicado → Publicado`, `Bot Padrão E2E → Publicado`.
+  (`Bot Padrão E2E` dizia "Rascunho" antes — e atendia.)
+- **`GET /ai/agents/assignable`** → `["Atendente Publicado (v1)", "Bot Padrão E2E (v-)"]`.
+  Antes: escondia o "Atendente Publicado" (`is_active=false`) e oferecia o
+  "Atendente Pausado" (`is_active=true`). Errava nos dois sentidos.
+- **Inbox, cabeçalho da conversa:** `Aberta · AU · Automático`.
+
+### Depois de pausar TODOS (pelo caminho que a tela usa)
+
+- **Tela:** os três em `Rascunho`.
+- **`assignable`** → `[]`.
+- **`automatico-ativo`** → `{ ativo: false }`.
+- **Inbox, cabeçalho da mesma conversa:** `Aberta · Sem responsável`.
+
+### A divergência isolada, sobre os MESMOS dados
+
+```
+     estado     | regua_ANTIGA (is_active) | regua_NOVA
+----------------+--------------------------+------------
+ COM publicado  | t                        | t
+ TODOS pausados | t   ← a mentira          | f
+```
+
+A régua antiga dizia "há automático atendendo" com todos os agentes pausados,
+porque o pausado mantém `is_active=true`. É o selo "Automático" na Inbox de uma
+organização onde ninguém responde.
+
+## Gates
+
+| gate | resultado |
+|---|---|
+| `npx tsc --noEmit` | limpo |
+| `pnpm lint` | 0 erros (299 warnings pré-existentes) |
+| `pnpm test:unit` | **574 de 575 arquivos verdes** — 6403 casos passando |
+| `pnpm build` | `BUILD_EXIT=0` |
+| `pnpm release:conferir` | fragmento aceito (`1.9.1 + patch = 1.9.2`) |
+
+A única suíte vermelha é `lib/ai/dispatcher/rate-limit.test.ts` (5 casos) — o
+vermelho conhecido e **alheio** que o `CLAUDE.md` documenta: o `.env.local` tem
+`UPSTASH_REDIS_REST_URL` apontando para um Redis local que não está de pé.
+Conferido que não toquei em `lib/ai/dispatcher/` neste trabalho.
+
+Controle do rodapé contra o grep, como manda o `CLAUDE.md`:
+`rodapé: 5 failed | grep contou: 5` — batem.
+
+## INCIDENTE — outra sessão apagou este trabalho do git (recuperado)
+
+Durante a sessão, o commit `8238b8e7` ("docs(release): o fragmento do conserto de
+namespace no update.sh (#403)"), feito por **outra sessão no mesmo worktree**,
+entrou nesta branch e **deletou do índice**:
+
+```
+docs/handoff/agente-pausado-assume-conversa.md   | 210 ---
+lib/ai/agents/no-ar.ts                           | 101 ---
+tests/unit/agente-pausado-nao-atende.test.ts     | 301 ---
+workers/ai-response-worker.ts                    |  30 +-
+```
+
+**Nada foi perdido** — os arquivos continuaram no working tree como untracked, e
+foram recommitados em `e1533012` com `git commit --only` de lista explícita.
+
+O sintoma que denunciou: `git diff --name-only origin/main...HEAD` devolveu
+arquivos que não eram meus (`.gitattributes`, `hostgator-setup-kit/install.sh`) e
+**não** devolveu os meus. Quem retomar isto: confira `git log --oneline -3` e
+`git worktree list` antes de confiar em qualquer diff, e nunca use `git add -A`
+neste worktree — `.gitattributes` e `hostgator-setup-kit/install.sh` seguem
+modificados por outra sessão e não devem entrar em commit deste trabalho.
