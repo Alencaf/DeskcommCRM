@@ -1,5 +1,5 @@
 -- ============================================================================
--- 0263 — A PODA DE NONCES FALA A LÍNGUA DO CRON
+-- 0265 — A PODA DE NONCES FALA A LÍNGUA DO CRON
 --
 -- `fn_expurgar_nonces_de_oauth` nasceu na 0190 com `(p_dias, p_lote)`. As três
 -- irmãs de retenção (`fn_podar_fila_de_jobs`, `fn_expurgar_auditoria_vencida`,

@@ -16056,7 +16056,7 @@ create policy calendar_oauth_nonces_ninguem_le
 -- A quarta poda do `data-retention`. Assinatura idêntica às três irmãs
 -- (`p_retencao_dias`, `p_limite`) para o mesmo laço de lotes servir sem
 -- caso especial. A 0190 nasceu com `(p_dias, p_lote)` e o cron nunca
--- encaixou — a 0263 troca os nomes.
+-- encaixou — a 0265 troca os nomes.
 --
 -- O `drop` vem ANTES do `create or replace` porque este bloco é o que o
 -- `update.sh` reaplica num clone instalado antes da troca, e `create or
