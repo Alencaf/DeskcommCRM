@@ -285,6 +285,25 @@ describe("os pisos do TypeScript e os do SQL são os mesmos números", () => {
     expect(bloco).toContain("p_limite");
     expect(bloco).not.toMatch(/fn_expurgar_nonces_de_oauth\(p_dias /);
   });
+
+  it("...e o baseline derruba a função antes de recriá-la, senão o clone antigo fica com os nomes velhos", async () => {
+    // `create or replace` não troca nome de argumento. Num clone instalado com
+    // `(p_dias, p_lote)`, o bloco sem o `drop` responde `cannot change name of
+    // input parameter "p_dias"`, e o `update.sh` — sem ON_ERROR_STOP — segue.
+    // O `test:db` não enxerga isto: as duas passadas dele partem do baseline
+    // ATUAL, que já nasce com os nomes novos.
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const sql = readFileSync(join(__dirname, "..", "..", "supabase", "baseline.sql"), "utf8");
+    const create = sql.indexOf("create or replace function public.fn_expurgar_nonces_de_oauth(");
+    const drop = sql.indexOf("drop function if exists public.fn_expurgar_nonces_de_oauth(int, int);");
+    expect(create, "não achei o create da poda de nonces no baseline").toBeGreaterThan(-1);
+    expect(drop, "o baseline não derruba a assinatura velha da poda de nonces").toBeGreaterThan(-1);
+    expect(drop).toBeLessThan(create);
+    // Nenhum outro statement entre o drop e o create: um create no meio (o da
+    // 0190 com os nomes velhos, por exemplo) seria o que o update reaplicaria.
+    expect(sql.slice(drop, create).match(/^\s*(create|alter)\s/gim) ?? []).toEqual([]);
+  });
 });
 
 describe("o handler HTTP — a falha entra na trilha, o vazio não", () => {

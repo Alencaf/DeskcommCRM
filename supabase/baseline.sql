@@ -16057,9 +16057,21 @@ create policy calendar_oauth_nonces_ninguem_le
 -- (`p_retencao_dias`, `p_limite`) para o mesmo laço de lotes servir sem
 -- caso especial. A 0190 nasceu com `(p_dias, p_lote)` e o cron nunca
 -- encaixou — a 0263 troca os nomes.
+--
+-- O `drop` vem ANTES do `create or replace` porque este bloco é o que o
+-- `update.sh` reaplica num clone instalado antes da troca, e `create or
+-- replace` não troca nome de argumento: lá ele responde `cannot change name
+-- of input parameter "p_dias"`, o `update.sh` (sem ON_ERROR_STOP) registra e
+-- segue, e o clone fica com a assinatura velha e a poda quebrada. Medido num
+-- Postgres 17 com o bloco da 0190 aplicado primeiro: sem o `drop`,
+-- `proargnames` segue `{p_dias,p_lote}` depois do update; com ele, vira
+-- `{p_retencao_dias,p_limite}`. Em banco que já tem os nomes novos o `drop`
+-- só recria a função — nada depende dela, e os grants são regravados logo
+-- abaixo.
+drop function if exists public.fn_expurgar_nonces_de_oauth(int, int);
 create or replace function public.fn_expurgar_nonces_de_oauth(
-  p_retencao_dias int,
-  p_limite int default 500
+  p_retencao_dias int default null,
+  p_limite int default null
 )
 returns int
 language plpgsql
