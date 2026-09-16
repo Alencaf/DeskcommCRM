@@ -21790,7 +21790,7 @@ create table if not exists public.ai_reply_drafts(
  error_code text,created_at timestamptz not null default now(),updated_at timestamptz not null default now(),
  unique(organization_id,conversation_id,agent_id,context_revision,operation_revision)
 );
--- 0264: clones that already have the table from 0227 keep the old NO ACTION
+-- 0266: clones that already have the table from 0227 keep the old NO ACTION
 -- FK. create table if not exists does not rewrite it.
 alter table public.ai_reply_drafts drop constraint if exists ai_reply_drafts_message_id_fkey;
 alter table public.ai_reply_drafts

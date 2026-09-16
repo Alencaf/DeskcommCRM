@@ -13,7 +13,7 @@ import { RAIZES_DO_APAGAMENTO } from "@/lib/settings/apagar-dados-operacionais";
  */
 const MIGRATION = join(
   process.cwd(),
-  "supabase/migrations/20260916090000_0264_rascunho_revisado_solta_a_mensagem.sql",
+  "supabase/migrations/20260916090000_0266_rascunho_revisado_solta_a_mensagem.sql",
 );
 const BASELINE = join(process.cwd(), "supabase/baseline.sql");
 
@@ -24,7 +24,7 @@ describe("zona de perigo — rascunho revisado não trava messages (#949)", () =
     expect(tabelas[0]).toBe("messages");
   });
 
-  it("a 0264 recria a FK com ON DELETE SET NULL", () => {
+  it("a 0266 recria a FK com ON DELETE SET NULL", () => {
     const sql = readFileSync(MIGRATION, "utf8");
     expect(sql).toMatch(/ai_reply_drafts_message_id_fkey/);
     expect(sql).toMatch(/on delete set null/i);

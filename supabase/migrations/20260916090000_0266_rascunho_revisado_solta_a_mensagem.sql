@@ -1,5 +1,5 @@
 -- ============================================================================
--- 0264 — RASCUNHO REVISADO SOLTA A MENSAGEM
+-- 0266 — RASCUNHO REVISADO SOLTA A MENSAGEM
 --
 -- `ai_reply_drafts.message_id` nasceu na 0227 com REFERENCES sem ON DELETE.
 -- A Zona de perigo apaga `messages` primeiro. Com uma resposta revisada
