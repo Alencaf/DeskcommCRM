@@ -14,7 +14,7 @@
 
 drop function if exists public.fn_expurgar_nonces_de_oauth(int, int);
 
-create function public.fn_expurgar_nonces_de_oauth(
+create or replace function public.fn_expurgar_nonces_de_oauth(
   p_retencao_dias int default null,
   p_limite int default null
 )
