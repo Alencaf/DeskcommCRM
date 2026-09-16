@@ -464,6 +464,16 @@ export async function reconcileAppointment(
     }
   } catch (e) {
     // Nunca persistir corpo remoto, e-mail ou payload no erro exibido.
+    //
+    // A exceção declarada é o `error.message` do Google dentro do
+    // `GoogleHttpError` (`transport.ts`, PR #975): só esse campo, recortado em
+    // 180 caracteres — cabe inteiro nos 200 que `fn_google_appointment` grava em
+    // `google_sync_error`. Sem ele a recusa virava "Google HTTP 400" e mais nada,
+    // e foi a mensagem ("Invalid resource id value."), não o código `reason`
+    // ("invalid"), que destravou a #467. O que o Google pode ecoar numa mensagem
+    // de erro é o que ESTA requisição mandou, e ela é deste compromisso, desta
+    // organização. Que as mensagens da Calendar API não carreguem dado pessoal
+    // não foi medido contra o catálogo do Google.
     const message =
       e instanceof GoogleHttpError
         ? e.message

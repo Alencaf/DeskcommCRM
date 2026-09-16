@@ -191,6 +191,33 @@ describe("receiver HTTP real: protocolos Google", () => {
       message: "Google HTTP 400: The specified time range is empty.",
     });
   });
+  it("mensagem longa ou quebrada em linhas cabe inteira nos 200 caracteres de google_sync_error", async () => {
+    // `fn_google_appointment` grava `left(message, 200)`. Um recorte que passasse
+    // disso seria cortado de novo no banco, sem aviso, e o fim do motivo sumiria.
+    respond = (_q, r) => {
+      r.statusCode = 403;
+      r.setHeader("content-type", "application/json");
+      r.end(JSON.stringify({ error: { code: 403, message: `Linha um\n\n${"x".repeat(500)}` } }));
+    };
+    const erro = await api()
+      .write("destination", "event /exact", "POST", {}, null)
+      .catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(Error);
+    const mensagem = (erro as Error).message;
+    expect(mensagem.startsWith("Google HTTP 403: Linha um x")).toBe(true);
+    expect(mensagem.length).toBeLessThanOrEqual(200);
+  });
+  it("corpo que não é JSON mantém só o status", async () => {
+    respond = (_q, r) => {
+      r.statusCode = 502;
+      r.setHeader("content-type", "text/html");
+      r.end("<html><body>Bad Gateway</body></html>");
+    };
+    await expect(api().write("destination", "event /exact", "POST", {}, null)).rejects.toMatchObject({
+      status: 502,
+      message: "Google HTTP 502",
+    });
+  });
 });
 
 it("GET não aceita outro id como confirmação do recurso exato", async () => {
