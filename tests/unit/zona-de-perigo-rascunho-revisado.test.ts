@@ -39,3 +39,18 @@ describe("zona de perigo — rascunho revisado não trava messages (#949)", () =
     expect(bloco).toMatch(/on delete set null/);
   });
 });
+
+describe("o update.sh não derruba a FK de message_id a cada passada (0266)", () => {
+  it("nenhum drop solto da FK no baseline: a troca mora num bloco que confere antes", () => {
+    const sql = readFileSync(BASELINE, "utf8");
+    // O `update.sh` reaplica o baseline inteiro com o app atendendo. Um `alter
+    // table … drop constraint` solto, no início da linha, roda em toda passada e
+    // pede trava em `messages` — a forma que este teste recusa.
+    expect(sql).not.toMatch(/^alter table public\.ai_reply_drafts drop constraint/im);
+    const inicio = sql.indexOf("-- ---- rascunho revisado solta a mensagem (migration 0266) ----");
+    expect(inicio, "o bloco rotulado da 0266 sumiu do baseline").toBeGreaterThan(-1);
+    const bloco = sql.slice(inicio, sql.indexOf("\n-- ---- ", inicio + 10));
+    expect(bloco).toMatch(/confdeltype = 'n'/);
+    expect(bloco).toMatch(/on delete set null/i);
+  });
+});

@@ -21790,12 +21790,9 @@ create table if not exists public.ai_reply_drafts(
  error_code text,created_at timestamptz not null default now(),updated_at timestamptz not null default now(),
  unique(organization_id,conversation_id,agent_id,context_revision,operation_revision)
 );
--- 0266: clones that already have the table from 0227 keep the old NO ACTION
--- FK. create table if not exists does not rewrite it.
-alter table public.ai_reply_drafts drop constraint if exists ai_reply_drafts_message_id_fkey;
-alter table public.ai_reply_drafts
-  add constraint ai_reply_drafts_message_id_fkey
-  foreign key (message_id) references public.messages(id) on delete set null;
+-- `on delete set null` no `message_id` é da 0266: o `create table if not exists`
+-- só vale para quem instala, e o clone que já tem a tabela é trocado no bloco
+-- "rascunho revisado solta a mensagem (migration 0266)", mais abaixo.
 alter table public.ai_reply_drafts enable row level security;
 revoke all on public.ai_reply_drafts from anon,authenticated;
 grant select on public.ai_reply_drafts to authenticated;
@@ -25971,6 +25968,60 @@ revoke execute on function public.fn_mesclar_contatos(uuid, uuid, uuid[]) from p
 grant execute on function public.fn_mesclar_contatos(uuid, uuid, uuid[]) to authenticated, service_role;
 
 notify pgrst, 'reload schema';
+
+-- ---- rascunho revisado solta a mensagem (migration 0266) ----
+-- `ai_reply_drafts.message_id` nasceu na 0227 sem `on delete` (NO ACTION), e a
+-- Zona de perigo apaga `messages` antes de `conversations`: numa organização que
+-- já enviou uma resposta revisada, o primeiro DELETE tomava 23503 e a ação
+-- parava em `falhou_em: messages`. SET NULL, como as outras FKs para
+-- `messages`; não CASCADE, porque apagar UMA mensagem não pode levar o
+-- rascunho junto (PR #976, issue #949).
+--
+-- CONDICIONAL e num `do` só, porque este bloco roda a cada `update.sh`, com o
+-- app atendendo. Derrubar e recriar a FK toda vez pede trava em `messages`, a
+-- tabela mais escrita do produto: medido num Postgres 17, com um INSERT aberto
+-- em `messages`, o `drop constraint` esperou até estourar o `lock_timeout`. A
+-- FK que já está em SET NULL não é tocada. A da 0227 (ou a falta de FK) é
+-- trocada numa instrução só: se falhar no meio, nada muda, e a coluna não fica
+-- sem FK.
+do $rascunho_solta_mensagem$
+declare
+  v_coluna smallint;
+  v_nome text;
+begin
+  select attnum into v_coluna
+    from pg_attribute
+   where attrelid = 'public.ai_reply_drafts'::regclass
+     and attname = 'message_id'
+     and not attisdropped;
+
+  if exists (
+    select 1
+      from pg_constraint
+     where conrelid = 'public.ai_reply_drafts'::regclass
+       and contype = 'f'
+       and conkey = array[v_coluna]
+       and confrelid = 'public.messages'::regclass
+       and confdeltype = 'n'
+  ) then
+    return;
+  end if;
+
+  for v_nome in
+    select conname
+      from pg_constraint
+     where conrelid = 'public.ai_reply_drafts'::regclass
+       and contype = 'f'
+       and conkey = array[v_coluna]
+  loop
+    execute format('alter table public.ai_reply_drafts drop constraint %I', v_nome);
+  end loop;
+
+  alter table public.ai_reply_drafts
+    add constraint ai_reply_drafts_message_id_fkey
+    foreign key (message_id) references public.messages(id) on delete set null;
+end
+$rascunho_solta_mensagem$;
 
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
