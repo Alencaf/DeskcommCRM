@@ -170,8 +170,10 @@ const schema = z.object({
   UPSTASH_REDIS_REST_URL: required("UPSTASH_REDIS_REST_URL"),
   UPSTASH_REDIS_REST_TOKEN: required("UPSTASH_REDIS_REST_TOKEN"),
 
-  // AI providers — env-gated. Worker no-ops with skip="ai_gateway_key_missing"
-  // when AI_GATEWAY_API_KEY is absent, so production boot must not be fatal.
+  // AI providers — optional here. These are the LAST rung of the key ladder: the
+  // worker skips with "ai_gateway_key_missing" only when no key serves the model
+  // anywhere, including the credential an organization registered in
+  // IA › Credenciais (lib/ai/gateway-binding.ts). So production boot must not be fatal.
   AI_GATEWAY_API_KEY: z.string().optional().default(""),
   AI_GATEWAY_BASE_URL: z.string().optional().default(""),
   // OpenRouter: alternativa ao gateway da Vercel, compatível com a API da
