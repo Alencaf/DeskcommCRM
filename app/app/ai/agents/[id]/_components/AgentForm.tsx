@@ -582,7 +582,11 @@ export function AgentForm(props: Props) {
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* `items-start`, e não `items-center`: o motivo do bloqueio mora embaixo do
+            Publicar, e centralizar a fila contra essa coluna mais alta desceria os
+            outros botões em relação a ele. Sem motivo, os botões têm a mesma altura
+            e o topo coincide com o centro. */}
+        <div className="flex flex-wrap items-start gap-2">
           {isEdit ? (
             <Button
               variant="outline"
@@ -611,7 +615,7 @@ export function AgentForm(props: Props) {
                 </Button>
               </span>
               {publishBlockReason ? (
-                <p className="max-w-xs text-right text-xs text-destructive" role="status">
+                <p className="max-w-xs text-right text-xs text-muted-foreground" role="status">
                   {publishBlockReason}
                 </p>
               ) : null}
