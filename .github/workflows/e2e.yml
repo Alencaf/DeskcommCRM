@@ -644,6 +644,7 @@ jobs:
         qa-sugestao-rejeitada-e-motivo.spec.ts
         qa-l12-agenda-contatos.spec.ts
         qa-l12-tags-radar.spec.ts
+        motivo-do-publicar-na-tela.spec.ts
 
       FORA_DO_CI: >-
         vps-fresh-onboarding.spec.ts
