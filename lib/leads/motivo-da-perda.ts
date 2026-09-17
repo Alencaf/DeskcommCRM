@@ -54,16 +54,23 @@ import { CANONICAL_LOST_REASONS } from "@/lib/schemas/leads";
  * levado para outro funil, e a origem é encerrada como perda porque é o único
  * desfecho que o schema oferece para "saiu daqui". Perguntar um motivo ao
  * operador o obrigaria a inventar uma causa comercial para um movimento
- * administrativo. `other` é canônico (`CANONICAL_LOST_REASONS`), então o trigger
- * aceita; para onde o negócio foi fica em `source_metadata.movido_para`, que é
- * onde a informação sobrevive. A instrução original da P-01 —
+ * administrativo. O motivo é PRÓPRIO e canônico — `moved_to_another_pipeline`, e
+ * não `other` —, porque as duas coisas se separam na hora de olhar a métrica:
+ * quem perdeu para o concorrente e quem foi levado para outro funil não são a
+ * mesma perda, e `fn_attendant_metrics` EXCLUI este motivo da contagem de perdas
+ * (migration 0266), de modo que a transferência não engorda o número de perdas
+ * de ninguém. Para onde o negócio foi fica em `source_metadata.movido_para`, que
+ * é onde a informação sobrevive. A instrução original da P-01 —
  * `lost_reason='moved_to_pipeline_X'` — seria recusada com 22023
  * `lost_reason_invalid` e perderia a troca inteira, não só a informação.
  *
  * ⚠️ Exigir motivo também na troca de funil é decisão do dono do produto, não
  * um ajuste de consistência: hoje a troca funciona sem perguntar.
  */
-export const MOTIVO_PADRAO_DA_TROCA = "other";
+export const MOTIVO_DA_TRANSFERENCIA = "moved_to_another_pipeline";
+
+/** O motivo com que a troca de funil encerra a ORIGEM. */
+export const MOTIVO_PADRAO_DA_TROCA = MOTIVO_DA_TRANSFERENCIA;
 
 /** O motivo com que a troca de funil encerra a ORIGEM. */
 export function motivoDaPerdaDaOrigem(informado?: string | null): string {

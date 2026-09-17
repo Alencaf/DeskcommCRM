@@ -231,7 +231,11 @@ describe("POST /api/v1/leads/[id]/clone", () => {
     expect(origem.status).toBe("lost");
     expect(origem.stage_id).toBe(S1_LOST);
     expect(origem.pipeline_id).toBe(P1);
-    expect(origem.lost_reason).toBe("other");
+    // O motivo é o da TRANSFERÊNCIA, não `other`: trocar de funil não é perda
+    // comercial, e `other` fazia a origem contar como perdida nos painéis.
+    // `moved_to_another_pipeline` é canônico no trigger (migration 0266) e as
+    // duas métricas o excluem — é o motivo que a decisão da #992 pediu.
+    expect(origem.lost_reason).toBe("moved_to_another_pipeline");
     expect((origem.source_metadata as Row).movido_para).toMatchObject({
       lead_id: clone.id,
       pipeline_id: P2,
