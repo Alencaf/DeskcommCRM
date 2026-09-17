@@ -58,6 +58,7 @@ vi.mock("@/lib/atendimento/origem-automacao", () => ({
 
 import { getAction } from "@/lib/automation/actions";
 import { MOTIVO_PADRAO_DA_TROCA } from "@/lib/leads/motivo-da-perda";
+import { opcoesDeMotivoDePerda } from "@/lib/leads/motivos-de-perda-do-funil";
 import { CANONICAL_LOST_REASONS } from "@/lib/schemas/leads";
 import type { ActionCtx } from "@/lib/automation/types";
 
@@ -114,7 +115,12 @@ function adminFalso(cenarios: {
   etapasDoDestino?: unknown;
   etapaDePerda?: unknown;
 }) {
+  const atualizacoes: { tabela: string; valores: unknown }[] = [];
+  const insercoes: { tabela: string; valores: unknown }[] = [];
   return {
+    atualizacoes,
+    insercoes,
+    rpc: async () => ({ data: null, error: null }),
     from(tabela: string) {
       const filtros: Record<string, unknown> = {};
       const api: Record<string, unknown> = {};
@@ -126,13 +132,22 @@ function adminFalso(cenarios: {
         filtros[coluna] = valor;
         return api;
       };
-      api.neq = (coluna: string, valor: unknown) => {
-        filtros[`neq:${coluna}`] = valor;
+      api.update = (valores: unknown) => {
+        atualizacoes.push({ tabela, valores });
         return api;
       };
+      api.insert = (valores: unknown) => {
+        insercoes.push({ tabela, valores });
+        return api;
+      };
+      api.rpc = mesmo;
       const resposta = () => {
         if (tabela === "crm_leads") {
-          if (filtros["neq:pipeline_id"]) return cenarios.negocioEmOutroFunil ?? null;
+          // Sem `pipeline_id` no filtro é a leitura dos abertos do contato em
+          // QUALQUER funil — a ação separa o "outro funil" no código.
+          if (!("pipeline_id" in filtros)) {
+            return [cenarios.negocioNoFunilDaRegra, cenarios.negocioEmOutroFunil].filter(Boolean);
+          }
           return cenarios.negocioNoFunilDaRegra ?? null;
         }
         if (tabela === "crm_stages") {
@@ -217,6 +232,22 @@ describe("create_or_move_lead — a regra transfere o negócio entre funis", () 
     expect(encerramento.motivo).toBe(MOTIVO_DA_TRANSFERENCIA);
     expect(encerramento.payloadNaTimeline).toMatchObject({ to_pipeline_id: FUNIL_DA_REGRA });
 
+    // O rastro dos dois lados, como na rota do clone: a linha do tempo do clone
+    // diz de onde veio, e a origem guarda para onde foi (P-01).
+    const admin = ctx.admin as unknown as ReturnType<typeof adminFalso>;
+    expect(admin.insercoes).toContainEqual({
+      tabela: "crm_lead_activities",
+      valores: expect.objectContaining({ lead_id: "clone-0001", type: "moved_from_pipeline" }),
+    });
+    expect(admin.atualizacoes).toContainEqual({
+      tabela: "crm_leads",
+      valores: expect.objectContaining({
+        source_metadata: expect.objectContaining({
+          movido_para: { lead_id: "clone-0001", pipeline_id: FUNIL_DA_REGRA, stage_id: ETAPA_ESCOLHIDA },
+        }),
+      }),
+    });
+
     // E o CLONE é o negócio que as próximas ações da regra enxergam.
     const publicado = (ctx.context.lead ?? {}) as Record<string, unknown>;
     expect(publicado.id).toBe("clone-0001");
@@ -286,6 +317,12 @@ describe("o motivo da transferência — as duas metades do mesmo nome", () => {
     expect([...CANONICAL_LOST_REASONS]).toContain(MOTIVO_DA_TRANSFERENCIA);
   });
 
+  it("não é oferecido ao operador na janela de perder — é motivo do sistema", () => {
+    const valores = opcoesDeMotivoDePerda([]).map((opcao) => opcao.valor);
+    expect(valores).not.toContain(MOTIVO_DA_TRANSFERENCIA);
+    expect(valores).toContain("other");
+  });
+
   it("o trigger aceita o motivo — senão o banco recusa o encerramento com 22023", () => {
     // A ÚLTIMA definição é a que vale no banco (apêndice da 0266, depois do dump).
     const corte = baseline.lastIndexOf(
@@ -296,8 +333,15 @@ describe("o motivo da transferência — as duas metades do mesmo nome", () => {
   });
 
   it("a métrica de perdas não conta a transferência", () => {
-    const metrica = baseline.slice(baseline.indexOf("fn_attendant_metrics"));
-    expect(metrica).toContain(`coalesce(lost_reason, '') <> '${MOTIVO_DA_TRANSFERENCIA}'`);
+    // A ÚLTIMA definição de cada função é a que vale no banco.
+    for (const funcao of ["fn_attendant_metrics", "fn_atrito_metrics"]) {
+      const corte = baseline.lastIndexOf(`create or replace function public.${funcao}`);
+      expect(corte, funcao).toBeGreaterThan(0);
+      const fim = baseline.indexOf("$$;", baseline.indexOf("$$", corte) + 2);
+      expect(baseline.slice(corte, fim), funcao).toContain(
+        `coalesce(lost_reason, '') <> '${MOTIVO_DA_TRANSFERENCIA}'`,
+      );
+    }
   });
 
   it("a migration 0266 existe, está no baseline e no MANIFEST", () => {

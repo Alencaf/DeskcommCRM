@@ -33,6 +33,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LoseLeadDialog } from "@/components/kanban/LoseLeadDialog";
 import { chaveDoQuadro } from "@/hooks/kanban/useBoard";
 import { CANONICAL_LOST_REASONS } from "@/lib/schemas/leads";
+
+// O padrão do produto MENOS o motivo do sistema: a transferência entre funis não
+// é escolha do operador (issue #992).
+const MOTIVOS_DO_OPERADOR = CANONICAL_LOST_REASONS.filter((m) => m !== "moved_to_another_pipeline");
 import { motivosDoFunil } from "@/lib/leads/motivos-de-perda-do-funil";
 import type { BoardData } from "@/lib/kanban/types";
 
@@ -172,7 +176,7 @@ describe("motivos de perda configurados no funil", () => {
 
   it("sem funil configurado, o padrão do produto e o 'other' vazio continuam valendo", async () => {
     abrir(comFunil({}));
-    expect(valuesDosMotivos()).toEqual([...CANONICAL_LOST_REASONS]);
+    expect(valuesDosMotivos()).toEqual(MOTIVOS_DO_OPERADOR);
 
     fireEvent.click(radio("other"));
     expect(confirmar().disabled).toBe(false);
@@ -184,7 +188,7 @@ describe("motivos de perda configurados no funil", () => {
 
   it("funil com lista VAZIA cai no padrão — nunca numa janela sem motivo nenhum", () => {
     abrir(comFunil({ lost_reasons: [] }));
-    expect(valuesDosMotivos()).toEqual([...CANONICAL_LOST_REASONS]);
+    expect(valuesDosMotivos()).toEqual(MOTIVOS_DO_OPERADOR);
   });
 });
 
