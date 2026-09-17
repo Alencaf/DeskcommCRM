@@ -3346,6 +3346,13 @@ export const DICIONARIO: Traducoes = {
   },
   "Editar automação": { es: "Editar automatización" },
   "Nova automação": { es: "Nueva automatización" },
+  "Quando faltarem N dias para uma data do funil": {
+    es: "Cuando falten N días para una fecha del embudo",
+  },
+  "No aniversário de um contato": { es: "En el cumpleaños de un contacto" },
+  "Escolha o funil, o campo de data e em quantos dias avisar.": {
+    es: "Elige el embudo, el campo de fecha y con cuántos días avisar.",
+  },
   "Monte a regra em três passos: quando algo acontece, opcionalmente confira uma condição, e então dispare uma ou mais ações.": {
     es: "Arma la regla en tres pasos: cuando algo sucede, opcionalmente revisa una condición, y entonces dispara una o más acciones.",
   },
