@@ -92,6 +92,11 @@ CRONS="
 # no dia errado metade do mundo e de madrugada boa parte do resto. Barato: quem
 # não configurou a automação não chega a ser varrido.
 7 * * * *|60|api/v1/cron/contact-birthdays
+# A DATA DO FUNIL (#989). Mesma cadência e mesmo motivo do aniversário: de hora
+# em hora, e quem decide o momento é o relógio de parede de CADA organização —
+# a rodada só age naquela que marca a hora da varredura. Minuto diferente do
+# aniversário para as duas não disputarem a mesma batida num self-host pequeno.
+23 * * * *|60|api/v1/cron/lead-date-field-due
 0 12 * * *|60|api/v1/cron/lgpd-sla-watcher
 30 3 * * *|120|api/v1/cron/kb-conversations-batch
 15 4 * * *|60|api/v1/cron/sync-model-catalog

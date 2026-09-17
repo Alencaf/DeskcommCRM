@@ -9166,6 +9166,19 @@ export const DICIONARIO: Traducoes = {
   "o compromisso": { es: "la cita" },
   "Entendi": { es: "Entendido" },
   "e-mail do convidado inválido": { es: "correo del invitado no válido" },
+  // As chaves do gatilho de dias até a data do funil. Medidas pela tela em
+  // `tests/unit/i18n-espanhol-cobre-a-tela.test.ts`: sem elas o gatilho novo
+  // sairia inteiro em português para quem escolheu espanhol.
+  "Funil do campo": { es: "Embudo del campo" },
+  "Campo de data": { es: "Campo de fecha" },
+  "Escolha o campo": { es: "Elige el campo" },
+  "Faltam N dias": { es: "Faltan N días" },
+  "O aviso sai no dia em que faltarem N dias para a data, uma vez por negócio. Para avisar DEPOIS da data, use N negativo — -60 confirma a entrega 60 dias após o casamento.": {
+    es: "El aviso sale el día en que falten N días para la fecha, una vez por negocio. Para avisar DESPUÉS de la fecha, usa N negativo — -60 confirma la entrega 60 días después de la boda.",
+  },
+  "Este funil ainda não tem campo de data. Cadastre um em Funis → Campos personalizados para poder escolhê-lo aqui.": {
+    es: "Este embudo aún no tiene campo de fecha. Registra uno en Embudos → Campos personalizados para poder elegirlo aquí.",
+  },
 };
 
 /**

@@ -61,6 +61,13 @@ export const AUDIT_ACTIONS = [
   "contact.merge_pending",
   "contact.merged",
   "contact.aniversario_emitido",
+  /**
+   * A varredura de data do funil (#989) emitiu o aviso de "faltam N dias". A
+   * trilha guarda a RODADA (quantos negócios, quantos pulados), e não um evento
+   * por negócio: a emissão já é a linha do `event_log`, e a pergunta que se faz
+   * depois é "a varredura das 9h rodou e quanta coisa saiu dela".
+   */
+  "lead.data_do_funil_emitida",
   "lgpd.anonymize_executed",
   // A cascata retomando o que uma execução interrompida não terminou (#310).
   "lgpd.anonymize_catchup",
