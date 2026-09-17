@@ -8899,6 +8899,19 @@ export const DICIONARIO: Traducoes = {
   "Um material marcado aqui foi arquivado no acervo — o agente não lê mais ele.": { es: "Un material marcado aquí fue archivado en el acervo — el agente ya no lo lee." },
   "Materiais marcados aqui foram arquivados no acervo — o agente não lê mais eles.": { es: "Materiales marcados aquí fueron archivados en el acervo — el agente ya no los lee." },
   "Desmarque para voltar a salvar.": { es: "Desmárcalo para volver a guardar." },
+  // As chaves do gatilho de dias até a data do funil. Medidas pela tela em
+  // `tests/unit/i18n-espanhol-cobre-a-tela.test.ts`: sem elas o gatilho novo
+  // sairia inteiro em português para quem escolheu espanhol.
+  "Funil do campo": { es: "Embudo del campo" },
+  "Campo de data": { es: "Campo de fecha" },
+  "Escolha o campo": { es: "Elige el campo" },
+  "Faltam N dias": { es: "Faltan N días" },
+  "O aviso sai no dia em que faltarem N dias para a data, uma vez por negócio. Para avisar DEPOIS da data, use N negativo — -60 confirma a entrega 60 dias após o casamento.": {
+    es: "El aviso sale el día en que falten N días para la fecha, una vez por negocio. Para avisar DESPUÉS de la fecha, usa N negativo — -60 confirma la entrega 60 días después de la boda.",
+  },
+  "Este funil ainda não tem campo de data. Cadastre um em Funis → Campos personalizados para poder escolhê-lo aqui.": {
+    es: "Este embudo aún no tiene campo de fecha. Registra uno en Embudos → Campos personalizados para poder elegirlo aquí.",
+  },
 };
 
 /**

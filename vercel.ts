@@ -31,6 +31,7 @@ const config: VercelConfig = {
     { path: "/api/v1/cron/agenda-expira-pendentes", schedule: "*/15 * * * *" },
     { path: "/api/v1/cron/case-stale-watcher", schedule: "7 * * * *" },
     { path: "/api/v1/cron/contact-birthdays", schedule: "7 * * * *" },
+    { path: "/api/v1/cron/lead-date-field-due", schedule: "23 * * * *" },
     { path: "/api/v1/cron/contact-avatars", schedule: "*/10 * * * *" },
     { path: "/api/v1/cron/agenda-google-refresh", schedule: "*/10 * * * *" },
     { path: "/api/v1/cron/agenda-google-sync", schedule: "*/15 * * * *" },
