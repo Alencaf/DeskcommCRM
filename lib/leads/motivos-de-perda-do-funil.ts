@@ -18,6 +18,7 @@
  * antes de gravar: "o que eu ofereço?" e "este valor passa?".
  */
 
+import { MOTIVO_DA_TRANSFERENCIA } from "@/lib/leads/motivo-da-perda";
 import { CANONICAL_LOST_REASONS } from "@/lib/schemas/leads";
 import { pipelineConfigPatchSchema } from "@/lib/schemas/settings";
 
@@ -86,7 +87,12 @@ export interface OpcaoDeMotivo {
  */
 export function opcoesDeMotivoDePerda(motivosCadastrados: readonly string[]): OpcaoDeMotivo[] {
   const doFunil = motivosCadastrados.length > 0;
-  const base: string[] = doFunil ? [...motivosCadastrados] : [...CANONICOS];
+  // A transferência entre funis é motivo do SISTEMA: a troca de funil a grava, e as
+  // métricas não a contam como perda. Oferecê-la aqui deixaria o operador tirar
+  // uma perda comercial da métrica com um clique.
+  const base: string[] = doFunil
+    ? [...motivosCadastrados]
+    : CANONICOS.filter((valor) => valor !== MOTIVO_DA_TRANSFERENCIA);
   const opcoes: OpcaoDeMotivo[] = base.map((valor) => ({ valor, doFunil }));
   if (!base.includes(OUTRO)) opcoes.push({ valor: OUTRO, doFunil: false });
   return opcoes;

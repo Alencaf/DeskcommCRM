@@ -14,10 +14,13 @@ import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import type { HandlerCtx } from "@/lib/api/handlers/types";
 import { createLeadHandler, moveLeadHandler } from "@/app/api/v1/leads/_handler";
+import { emitLeadActivity } from "@/lib/leads/activity-emitter";
+import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import {
   escolheEtapaDeDestino,
   montaPayloadDoClone,
   recusaTrocaDeFunil,
+  registroDoDestino,
   type EtapaDoFunil,
   type OrigemParaClonar,
 } from "@/lib/leads/clonar-para-funil";
@@ -155,23 +158,28 @@ const COLUNAS_DA_ORIGEM =
  * B em vez de levar o de A. O mais recente primeiro — o mesmo desempate de
  * `negocioAbertoDoContato`, e o mesmo comportamento quando a leitura falha
  * (`null`: a ação cria, como criava antes).
+ *
+ * O "outro funil" é filtrado aqui, e não com `.neq` no PostgREST: os dublês de
+ * banco da suíte (inclusive o de `tests/invariants/automation-actions-crud`)
+ * não implementam `neq`, e a chamada virava TypeError → `status: "failed"`.
+ * Um contato com mais de `LIMITE` negócios abertos é caso de dados, não de fluxo.
  */
 async function negocioAbertoEmOutroFunil(
   ctx: ActionCtx,
   contactId: string,
   pipelineId: string,
 ): Promise<OrigemParaClonar | null> {
+  const LIMITE = 20;
   const { data } = await ctx.admin
     .from("crm_leads")
     .select(COLUNAS_DA_ORIGEM)
     .eq("organization_id", ctx.organizationId)
     .eq("contact_id", contactId)
     .eq("status", "open")
-    .neq("pipeline_id", pipelineId)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data as OrigemParaClonar | null) ?? null;
+    .limit(LIMITE);
+  const abertos = Array.isArray(data) ? (data as OrigemParaClonar[]) : [];
+  return abertos.find((negocio) => negocio.pipeline_id !== pipelineId) ?? null;
 }
 
 /**
@@ -222,6 +230,31 @@ async function transfereParaOFunil(
   if (!etapaDePerda) return { ok: false, error: "origem_sem_etapa_de_perda" };
 
   const clone = await createLeadHandler(ctx.admin, handlerCtx, montaPayloadDoClone(origem, destino.etapa));
+  const destination = registroDoDestino(clone);
+
+  // O rastro dos dois lados, como na rota do clone: a linha do tempo do negócio
+  // novo diz de onde ele veio, e a origem guarda `movido_para` (P-01).
+  const atividadeDoClone = await emitLeadActivity(ctx.admin, {
+    organizationId: ctx.organizationId,
+    leadId: String(destination.lead_id),
+    contactId: origem.contact_id ?? null,
+    type: "moved_from_pipeline",
+    sourceModule: "crm",
+    sourceId: origem.id,
+    actor: handlerCtx.actor,
+    reason: "Veio de outro funil pela automação",
+    payload: { from_pipeline_id: origem.pipeline_id, from_lead_id: origem.id },
+  });
+  if (!atividadeDoClone.ok) {
+    await registraFalhaDeAtividade(ctx.admin, {
+      organizationId: ctx.organizationId,
+      leadId: String(destination.lead_id),
+      tipo: "moved_from_pipeline",
+      origem: "lib/automation/actions/create-or-move-lead",
+      erro: atividadeDoClone.error,
+      requestId: handlerCtx.requestId,
+    });
+  }
 
   await encerraDemanda(ctx.admin, handlerCtx, {
     leadId: origem.id,
@@ -230,6 +263,16 @@ async function transfereParaOFunil(
     razaoNaTimeline: "Levado para outro funil pela automação",
     payloadNaTimeline: { to_pipeline_id: pipelineId, to_lead_id: clone.id },
   });
+
+  const { error: movidoErr } = await ctx.admin
+    .from("crm_leads")
+    .update({
+      source_metadata: { ...((origem.source_metadata ?? {}) as Record<string, unknown>), movido_para: destination },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", origem.id)
+    .eq("organization_id", ctx.organizationId);
+  if (movidoErr) return { ok: false, error: movidoErr.message };
 
   return { ok: true, clone: clone as unknown as Record<string, unknown> };
 }
