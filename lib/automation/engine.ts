@@ -20,7 +20,7 @@ import { evaluateConditions, type RuleCondition } from "@/lib/automation/conditi
 import { getAction } from "@/lib/automation/actions";
 import type { ActionResultDetail } from "@/lib/automation/types";
 import { audit } from "@/lib/audit";
-import { regraDoEvento } from "@/lib/automation/gatilho-de-data-do-funil";
+import { GATILHO_DE_DATA_DO_FUNIL, regraDoEvento } from "@/lib/automation/gatilho-de-data-do-funil";
 import { ENTIDADE_ESPERADA_POR_GATILHO } from "@/lib/schemas/webhooks";
 import { logger } from "@/lib/logger";
 
@@ -196,7 +196,10 @@ export async function runAutomationForEvent(
   // Todo outro gatilho emite payload sem `rule_id`, então `regraDoEvento`
   // devolve `null` e a seleção segue exatamente como sempre foi: todas as
   // regras ativas daquele tipo.
-  const regraApontada = regraDoEvento(row.payload);
+  // O recorte vale SÓ para o gatilho do relógio: um `rule_id` que apareça no
+  // payload de qualquer outro evento não deve escolher regra nenhuma.
+  const regraApontada =
+    row.event_type === GATILHO_DE_DATA_DO_FUNIL ? regraDoEvento(row.payload) : null;
   const matched = regraApontada ? todas.filter((r) => r.id === regraApontada) : todas;
   if (!matched.length) {
     return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "ok", detail: "no_rules" };

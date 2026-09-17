@@ -163,6 +163,17 @@ describe("a configuração que a regra guarda", () => {
     expect(configDoGatilhoDeData("{}")).toBeNull();
   });
 
+  it("o campo precisa ter FORMATO de chave do funil — ele vai para o filtro da varredura", () => {
+    // O nome do campo é interpolado no `.or(...)` do PostgREST. Texto com
+    // vírgula, ponto ou parêntese ali é DSL, não nome de campo.
+    for (const campo of ["data,do_casamento", "data.do(casamento)", "data do casamento", "*", "1data"]) {
+      expect(configDoGatilhoDeData({ ...valida, campo }), campo).toBeNull();
+    }
+    expect(configDoGatilhoDeData({ ...valida, campo: "Data_Do_Casamento2" })).toMatchObject({
+      campo: "Data_Do_Casamento2",
+    });
+  });
+
   it("`dias` é número inteiro — string de formulário não passa por acidente", () => {
     expect(configDoGatilhoDeData({ ...valida, dias: "-240" })).toBeNull();
     expect(configDoGatilhoDeData({ ...valida, dias: 1.5 })).toBeNull();

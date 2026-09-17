@@ -532,6 +532,36 @@ describe("o motor respeita o evento dirigido", () => {
     expect(desfecho.status).toBe("ok");
   });
 
+  it("`rule_id` no payload de OUTRO gatilho não escolhe regra nenhuma", async () => {
+    // O recorte é do relógio. Se um emissor qualquer puser `rule_id` no payload
+    // de outro gatilho, a seleção continua sendo a de sempre: todas as regras
+    // ativas daquele tipo. Duas regras de etiqueta, evento com `rule_id` de uma
+    // delas — as duas têm de rodar.
+    const A = "aaaaaaaa-0000-4000-8000-0000000000a1";
+    const B = "bbbbbbbb-0000-4000-8000-0000000000b1";
+    for (const id of [A, B]) {
+      mundo.linhas("automation_rules").push(
+        regraDoFunil({ id, name: `Etiqueta ${id}`, trigger_event: "lead.tag_added", trigger_config: {} }),
+      );
+    }
+    const lead = mundo.linhas("crm_leads")[0] as Linha;
+
+    await runAutomationForEvent(dubles.adminAtual.valor as SupabaseClient, {
+      id: "eeeeeeee-0000-4000-8000-00000000000f",
+      organization_id: ORG,
+      event_type: "lead.tag_added",
+      entity_kind: "crm_lead",
+      entity_id: lead.id,
+      payload: { rule_id: A, lead },
+      metadata: {},
+    } as unknown as EventRow);
+
+    expect(
+      mundo.linhas("automation_rule_runs").map((r) => r.rule_id).sort(),
+      "o `rule_id` de um gatilho que não é o do relógio recortou a seleção",
+    ).toEqual([A, B].sort());
+  });
+
   it("controle: sem `rule_id`, o mesmo evento acorda as duas (a marca não é vacuidade)", async () => {
     mundo.linhas("automation_rules").push(
       regraDoFunil({

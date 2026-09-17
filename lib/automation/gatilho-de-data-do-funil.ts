@@ -208,7 +208,11 @@ export function configDoGatilhoDeData(bruto: unknown): ConfigDoGatilhoDeData | n
 
   const { pipeline_id: pipelineId, campo, dias } = bruto as Record<string, unknown>;
   if (typeof pipelineId !== "string" || !pipelineId.trim()) return null;
-  if (typeof campo !== "string" || !campo.trim()) return null;
+  // O `campo` é interpolado no filtro `.or(...)` da varredura, então ele só
+  // passa com o FORMATO de chave de campo do funil (`lib/schemas/settings.ts`).
+  // Qualquer outra coisa é configuração torta, e a rodada a conta em
+  // `pulados.config_invalida` em vez de mandar texto livre ao PostgREST.
+  if (typeof campo !== "string" || !/^[a-z][a-z0-9_]*$/i.test(campo.trim())) return null;
   if (!Number.isInteger(dias)) return null;
 
   const n = dias as number;
