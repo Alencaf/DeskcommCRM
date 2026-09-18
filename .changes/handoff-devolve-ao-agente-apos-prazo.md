@@ -1,0 +1,6 @@
+---
+impacto: capacidade_nova
+secao: adicionado
+titulo: A conversa que ficou com uma pessoa pode voltar ao agente de IA sozinha, depois de um prazo
+---
+Quando alguém assume uma conversa — pelo botão, pela IA passando para humano ou pelo celular —, o agente de IA para de responder nela até ser devolvido. Isso continua sendo a regra. O que muda: em Configurações › Distribuição de atendimento, a organização pode ligar um prazo (de 5 minutos a 24 horas) para devolver a conversa ao agente sozinha quando ninguém da equipe deu mais nenhum sinal — nem assumiu, nem respondeu pela tela ou pelo celular. O tempo conta do último sinal, então um atendimento longo com a pessoa respondendo não é interrompido. A volta acontece pelo mesmo caminho do botão "Devolver": as travas saem, o acompanhamento pausado retoma e a linha do tempo do negócio diz que foi o prazo, e depois de quantos minutos. Só devolve onde há agente publicado para aquele número — devolver para ninguém deixaria a conversa muda. Desligado (o padrão, inclusive para quem já tem o sistema instalado), nada muda: a IA só volta quando alguém clica em Devolver. Motivo: numa instalação real, 12 das 31 conversas ativas de um dia estavam paradas com humano, ninguém devolvia, e o cliente que escrevia de novo ficava sem resposta. Crédito: @Gervanno.

@@ -385,6 +385,22 @@
       "type": "service",
       "label": "lib/escalacao/atendimento-manual.ts",
       "sublabel": "pausarIaPorAtendimentoManual — pessoa respondeu por fora do CRM (pausa COM PRAZO)"
+    },
+    {
+      "id": "devolucaoPrazo",
+      "lane": "motor",
+      "col": 3,
+      "type": "worker",
+      "label": "cron handoff-devolucao",
+      "sublabel": "a cada 5 min: handoff parado além do prazo da org volta ao agente — pela MESMA função"
+    },
+    {
+      "id": "prazoConfig",
+      "lane": "humano",
+      "col": 2,
+      "type": "frontend",
+      "label": "Configurações › Distribuição de atendimento",
+      "sublabel": "settings.routing.handoff_return_after_minutes — null = IA-06 (nunca)"
     }
   ],
   "edges": [
@@ -783,6 +799,24 @@
       "from": "retomada",
       "to": "atendimentoManual",
       "label": "'Devolver ao automático' desfaz esta pausa ANTES da hora (solta a TRAVA 2, a mesma) — sem clique nenhum, o prazo vence e a IA volta sozinha"
+    },
+    {
+      "id": "e67",
+      "from": "prazoConfig",
+      "to": "devolucaoPrazo",
+      "label": "o prazo por organização; ausente, o cron não lê conversa nenhuma"
+    },
+    {
+      "id": "e68",
+      "from": "devolucaoPrazo",
+      "to": "conversas",
+      "label": "lê quem está com humano de forma durável e há quanto tempo sem sinal (handoff, assumir, última saída)"
+    },
+    {
+      "id": "e69",
+      "from": "devolucaoPrazo",
+      "to": "retomada",
+      "label": "origem automática — o rastro diz 'após N min', não 'alguém clicou'"
     }
   ],
   "cards": [

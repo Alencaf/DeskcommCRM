@@ -9,6 +9,13 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import { IDIOMAS } from "@/lib/i18n/idiomas";
 import { IDIOMAS_EM_CONSTRUCAO } from "@/lib/i18n/registro";
 
+import {
+  AREAS_DE_PRODUTO,
+  RAIZ_DAS_FIXTURES,
+  buracosDeEspanhol,
+  varrerChavesDeI18n,
+} from "./helpers/chave-dinamica";
+
 /**
  * O ESPANHOL COBRE A TELA, E O PORTUGUÊS NÃO MUDA UM BYTE.
  *
@@ -107,8 +114,7 @@ const FORA_DO_PRODUTO: Record<string, string> = {
 const EM_PORTUGUES_DE_PROPOSITO: { arquivo: string; texto: string; motivo: string }[] = [
   {
     arquivo: "app/global-error.tsx",
-    texto:
-      "Tente novamente em instantes. Se persistir, contate o suporte com o ID abaixo.",
+    texto: "Tente novamente em instantes. Se persistir, contate o suporte com o ID abaixo.",
     motivo:
       "é o error boundary da RAIZ: renderiza fora de qualquer provider, quando o app já falhou. Chamar um hook de contexto ali é justamente o que não pode falhar de novo",
   },
@@ -190,7 +196,10 @@ function ehPadraoDeData(texto: string): boolean {
 
 /** Um placeholder pode listar VÁRIOS endereços, um por linha. Todos têm de ser. */
 function soEnderecosDeRede(texto: string): boolean {
-  const linhas = texto.split(/[\n,;]/).map((l) => l.trim()).filter(Boolean);
+  const linhas = texto
+    .split(/[\n,;]/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   return linhas.length > 0 && linhas.every((l) => ENDERECO_DE_REDE.test(l));
 }
 
@@ -375,7 +384,8 @@ function valoresDaTabela(tabela: ts.Expression): ts.StringLiteralLike[] {
     if (ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) valores.push(no);
   };
   if (ts.isObjectLiteralExpression(tabela)) {
-    for (const prop of tabela.properties) if (ts.isPropertyAssignment(prop)) coleta(prop.initializer);
+    for (const prop of tabela.properties)
+      if (ts.isPropertyAssignment(prop)) coleta(prop.initializer);
   } else if (ts.isArrayLiteralExpression(tabela)) {
     for (const el of tabela.elements) coleta(el);
   }
@@ -506,5 +516,202 @@ describe("nenhuma prosa em português escapa de t()", () => {
       `${vazando.length} texto(s) em português renderizam crus — quem escolheu espanhol vê isto em português. ` +
         `Passe cada um por t(). ${COMO_CONSERTAR}`,
     ).toEqual([]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * CHAVE DINÂMICA RESOLVIDA FORA DO ARQUIVO — o segundo furo da #603.
+ *
+ * A catraca acima resolve a tabela de rótulo declarada NO MESMO arquivo
+ * (`tabelasDeModulo`) e mais nada. Ficavam cegos, então, os quatro desenhos que
+ * a tela de fato usa e que moram em OUTRO módulo:
+ *
+ *   t(TRIGGER_LABELS[gatilho])    ← app/app/webhooks/_components/labels.ts
+ *   t(ACTION_LABELS[tipo])        ← app/app/webhooks/_components/labels.ts
+ *   t(SEVERITY_LABEL[gravidade])  ← lib/ai/agent-inbox-copy.ts
+ *   t(ROTULO_DO_PAPEL[papel])     ← lib/auth/types.ts
+ *
+ * Não é hipótese: é a dívida medida na `main` de 18/08/2026 — 103 chamadas
+ * resolvidas, 196 valores exigidos do dicionário, 9 deles ausentes em 3 arquivos
+ * (5 chamadas). São esses 9 que a `DIVIDA_CONGELADA` abaixo congela.
+ *
+ * Os outros 615 sítios dinâmicos seguem não resolvidos DE PROPÓSITO: o argumento
+ * é dado de runtime (identificador solto, `algo.campo`, `TABELA[x] ?? x`), e
+ * cobrar isso é o passo 2 da issue — proibir `t()` sobre dado do operador. Chutar
+ * o conjunto de valores ali seria falso positivo, e falso positivo em catraca
+ * nova custa a confiança dela.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/** Só o que o dicionário promete: a coluna `es`. */
+const temEspanholNoDicionario = (chave: string): boolean => Boolean(DICIONARIO[chave]?.es);
+
+const COMO_CONSERTAR_CHAVE_DINAMICA =
+  "Conserto: uma linha em lib/i18n/dicionario.ts para CADA valor que a expressão pode assumir — " +
+  '"texto em português": { es: "texto en español" }. A chave vem de uma tabela de rótulo: traduza todos os valores dela. ' +
+  "Não fala espanhol? Mande o PR assim mesmo e diga isso na descrição. " +
+  "Se o valor não é texto de tela (identificador de wire, chave técnica), ele não deveria passar por t(): conserte a chamada. " +
+  "É dívida de antes e não é do seu PR? Escreva o motivo em DIVIDA_CONGELADA, neste arquivo, com o par arquivo + valor. " +
+  "Confira com: pnpm test:unit tests/unit/i18n-espanhol-cobre-a-tela.test.ts";
+
+/**
+ * A dívida de HOJE, congelada — um par arquivo + valor por linha.
+ *
+ * Como a `EM_PORTUGUES_DE_PROPOSITO` acima, esta lista SÓ ENCOLHE: pagar a
+ * tradução (ou tirar o valor de `t()`) faz a entrada deixar de casar, e aí a
+ * catraca fica vermelha pedindo a remoção daqui. Entrada nova precisa do
+ * argumento escrito — e o argumento nunca é "não deu tempo".
+ *
+ * Casa por arquivo + valor, não por linha: rebase alheio que sobe três linhas
+ * não tem de pintar vermelho quem não mexeu em tradução.
+ */
+const DIVIDA_CONGELADA: { arquivo: string; chave: string; motivo: string }[] = [
+  {
+    arquivo: "app/app/ai/inbox/_components/AgentInboxList.tsx",
+    chave: "informativo",
+    motivo:
+      "valor de SEVERITY_LABEL (lib/ai/agent-inbox-copy.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "Iniciar fluxo de mensagem",
+    motivo:
+      "valor de ACTION_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "No aniversário de um contato",
+    motivo:
+      "valor de TRIGGER_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "Quando faltarem N dias para uma data do funil",
+    motivo:
+      "valor de TRIGGER_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "Quando um horário for cancelado",
+    motivo:
+      "valor de TRIGGER_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "Quando um horário for marcado",
+    motivo:
+      "valor de TRIGGER_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "Quando um horário for remarcado",
+    motivo:
+      "valor de TRIGGER_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/app/webhooks/_components/RuleEditor.tsx",
+    chave: "Quando um horário pendente for confirmado",
+    motivo:
+      "valor de TRIGGER_LABELS (app/app/webhooks/_components/labels.ts): a chave ainda não tem linha no dicionário",
+  },
+  {
+    arquivo: "app/onboarding/invite-team/_form.tsx",
+    chave: "Assistente com autonomia de operação",
+    motivo:
+      "valor de ROTULO_DO_PAPEL (lib/auth/types.ts): a chave ainda não tem linha no dicionário",
+  },
+];
+
+function ehDividaCongelada(arquivo: string, chave: string): boolean {
+  return DIVIDA_CONGELADA.some((e) => e.arquivo === arquivo && e.chave === chave);
+}
+
+describe("chave dinâmica: o valor que sai de tabela também tem de ter espanhol", () => {
+  /**
+   * Uma varredura só para o `describe` inteiro: cada uma lê e parseia centenas
+   * de arquivos, e repetir por `it()` seria caro sem cobrar nada a mais.
+   */
+  const varredura = varrerChavesDeI18n(AREAS_DE_PRODUTO);
+  const buracos = buracosDeEspanhol(varredura, temEspanholNoDicionario);
+
+  it("a varredura enxerga de verdade — o verde abaixo não é vacuidade", () => {
+    expect(
+      varredura.arquivosVarridos,
+      "nenhum arquivo varrido: o caminho das áreas mudou?",
+    ).toBeGreaterThan(300);
+    expect(
+      varredura.dinamicos.length,
+      "nenhuma chave dinâmica resolvida: a regra deixou de casar com o produto",
+    ).toBeGreaterThan(50);
+    const conhecido = varredura.dinamicos.find(
+      (d) =>
+        d.arquivo === "app/app/webhooks/_components/RuleEditor.tsx" &&
+        d.valores.includes("No aniversário de um contato"),
+    );
+    expect(
+      conhecido,
+      "o sítio t(TRIGGER_LABELS[gatilho]) saiu de app/app/webhooks/_components/RuleEditor.tsx",
+    ).toBeDefined();
+    expect(
+      conhecido?.procedencia,
+      "a resolução parou de atravessar módulo: voltou a ser cega para tabela importada",
+    ).toContain("labels.ts");
+  });
+
+  it("nenhum valor de chave dinâmica cai no português fora da dívida congelada", () => {
+    const foraDaLista = buracos
+      .filter((b) => !ehDividaCongelada(b.arquivo, b.chave))
+      .map((b) => `${b.locais.join(" ")} → ${JSON.stringify(b.chave)}\n      ${b.procedencia}`);
+    expect(
+      foraDaLista,
+      `${foraDaLista.length} valor(es) de chave dinâmica sem espanhol: quem escolheu espanhol vê isto em português. ` +
+        COMO_CONSERTAR_CHAVE_DINAMICA,
+    ).toEqual([]);
+  });
+
+  it("a dívida congelada só encolhe: entrada que deixou de casar é vermelho", () => {
+    const pagas = DIVIDA_CONGELADA.filter(
+      (e) => !buracos.some((b) => b.arquivo === e.arquivo && b.chave === e.chave),
+    ).map((e) => `${e.arquivo} → ${JSON.stringify(e.chave)} (motivo declarado: ${e.motivo})`);
+    expect(
+      pagas,
+      `${pagas.length} entrada(s) da DIVIDA_CONGELADA não casam mais com buraco nenhum: o valor foi traduzido, ` +
+        "ou a chamada saiu de t(), ou o valor mudou de arquivo. Remova a entrada deste arquivo — a lista só encolhe.",
+    ).toEqual([]);
+  });
+});
+
+describe("dente da catraca: a fixture prova os dois lados", () => {
+  /** A linha do `t(...)` na fixture, lida do arquivo — para não mentir sobre o local. */
+  const linhaDoT = (caso: string): number => {
+    const linhas = readFileSync(join(RAIZ, RAIZ_DAS_FIXTURES, caso, "painel.tsx"), "utf8").split(
+      "\n",
+    );
+    const achou = linhas.findIndex((l) => l.includes("t(ROTULO_DA_ETAPA["));
+    expect(achou, `a fixture ${caso} perdeu a chamada t(ROTULO_DA_ETAPA[...])`).toBeGreaterThan(-1);
+    return achou + 1;
+  };
+
+  it("fixture VERDE passa: tabela de outro módulo, todos os valores com espanhol", () => {
+    const varredura = varrerChavesDeI18n([`${RAIZ_DAS_FIXTURES}/verde`]);
+    expect(
+      varredura.dinamicos.length,
+      "a fixture verde não produziu chave dinâmica nenhuma: a regra sob teste não foi exercitada",
+    ).toBe(1);
+    expect(buracosDeEspanhol(varredura, temEspanholNoDicionario)).toEqual([]);
+  });
+
+  it("fixture VERMELHA reprova no valor que falta, com arquivo:linha e o que fazer", () => {
+    const varredura = varrerChavesDeI18n([`${RAIZ_DAS_FIXTURES}/vermelha`]);
+    expect(
+      varredura.dinamicos.length,
+      "a fixture vermelha não produziu chave dinâmica nenhuma: a regra sob teste não foi exercitada",
+    ).toBe(1);
+    const buracos = buracosDeEspanhol(varredura, temEspanholNoDicionario);
+    expect(buracos.map((b) => `${b.locais.join(" ")} → ${JSON.stringify(b.chave)}`)).toEqual([
+      `${RAIZ_DAS_FIXTURES}/vermelha/painel.tsx:${linhaDoT("vermelha")} → "Rótulo que a fixture vermelha deixou sem tradução"`,
+    ]);
+    // A mensagem de falha é parte do gate: ela diz ONDE consertar e COMO conferir.
+    expect(COMO_CONSERTAR_CHAVE_DINAMICA).toContain("lib/i18n/dicionario.ts");
+    expect(COMO_CONSERTAR_CHAVE_DINAMICA).toContain("pnpm test:unit");
   });
 });

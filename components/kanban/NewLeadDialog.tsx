@@ -124,7 +124,10 @@ export function NewLeadDialog({
       pipeline_id: pipelineId,
       stage_id: values.stage_id,
       title: values.title.trim(),
-      currency: "BRL",
+      // A moeda NÃO vai daqui. O browser não sabe a moeda da organização, e
+      // mandar "BRL" fazia toda instalação em peso ou dólar cadastrar lead em
+      // real. Omitir é o conserto: quem decide é o servidor, que lê a
+      // organização (`moedaDaOrganizacao`, em `createLeadHandler`).
       source: "manual",
       tags,
     };

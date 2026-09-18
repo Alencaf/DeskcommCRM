@@ -99,7 +99,17 @@ export const createLeadSchema = z.object({
   description: z.string().max(2000).nullable().optional(),
   contact_id: z.string().uuid().nullable().optional(),
   value_cents: z.coerce.number().int().nonnegative().nullable().optional(),
-  currency: z.string().length(3).default("BRL"),
+  /**
+   * Sem `default`, e isso É o conserto.
+   *
+   * Com `.default("BRL")` o campo nunca chegava ausente ao handler: quem
+   * omitia a moeda recebia real, e uma organização que declarou peso ou dólar
+   * em Configurações via cada lead novo nascer em BRL — o mesmo defeito que a
+   * migration 0208 consertou no catálogo de produtos, repetido no funil. O
+   * padrão não é do schema porque ele não sabe de que organização se trata; é
+   * do handler, que resolve pela `moedaDaOrganizacao()`.
+   */
+  currency: z.string().length(3).optional(),
   owner_user_id: z.string().uuid().nullable().optional(),
   /** Dono agente já na criação (0070) — mesma regra do update: os dois é 422. */
   owner_agent_id: z.string().uuid().nullable().optional(),

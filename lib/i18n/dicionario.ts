@@ -4016,6 +4016,20 @@ export const DICIONARIO: Traducoes = {
   "Quem recebe o cliente novo": { es: "Quién recibe al cliente nuevo" },
   "Vale para conversa que chega sem dono.": { es: "Vale para conversación que llega sin dueño." },
   "Tentativas antes de desistir": { es: "Intentos antes de desistir" },
+  "Quando a pessoa some, a IA volta?": { es: "Cuando la persona desaparece, ¿la IA vuelve?" },
+  "Quando alguém assume uma conversa, o agente de IA para de responder nela até ser devolvido. Se ninguém devolve, o cliente que escreve de novo fica sem resposta.": {
+    es: "Cuando alguien asume una conversación, el agente de IA deja de responder en ella hasta que se la devuelvan. Si nadie la devuelve, el cliente que vuelve a escribir se queda sin respuesta.",
+  },
+  "Devolver ao agente sozinho depois de um tempo sem resposta da equipe": {
+    es: "Devolver al agente por sí solo tras un tiempo sin respuesta del equipo",
+  },
+  "O tempo conta a partir do último sinal de uma pessoa na conversa: assumir, responder pela tela ou pelo celular. Só devolve onde há agente publicado. Desligado, vale a regra de sempre: a IA só volta quando alguém clica em Devolver.": {
+    es: "El tiempo cuenta desde la última señal de una persona en la conversación: asumir, responder por la pantalla o por el celular. Solo devuelve donde hay un agente publicado. Apagado, vale la regla de siempre: la IA solo vuelve cuando alguien hace clic en Devolver.",
+  },
+  "Minutos sem resposta da equipe": { es: "Minutos sin respuesta del equipo" },
+  "Entre 5 minutos e 24 horas. Sessenta minutos é a ordem de grandeza de um atendimento humano.": {
+    es: "Entre 5 minutos y 24 horas. Sesenta minutos es el orden de magnitud de una atención humana.",
+  },
   "Quando não há ninguém disponível, o sistema tenta de novo mais tarde. Ao estourar, a conversa fica na fila esperando alguém.": {
     es: "Cuando no hay nadie disponible, el sistema lo intenta de nuevo más tarde. Al agotarse, la conversación queda en la fila esperando a alguien.",
   },
@@ -6797,7 +6811,7 @@ export const DICIONARIO: Traducoes = {
   "Por que não entrou": { es: "Por qué no entró" },
   "Ele consulta este material antes de responder sobre o seu negócio.": { es: "Consulta este material antes de responder sobre tu negocio." },
   "Que tipo de material é": { es: "Qué tipo de material es" },
-  "PDF, Markdown ou texto, até 20 MB. Um PDF só de imagens escaneadas não tem letra nenhuma para ler — envie uma versão com texto selecionável.": { es: "PDF, Markdown o texto, hasta 20 MB. Un PDF solo de imágenes escaneadas no tiene ninguna letra para leer — envía una versión con texto seleccionable." },
+  "PDF, Markdown, CSV ou texto, até 20 MB. Um PDF só de imagens escaneadas não tem letra nenhuma para ler — envie uma versão com texto selecionável. Planilha Excel? Salve como CSV primeiro.": { es: "PDF, Markdown, CSV o texto, hasta 20 MB. Un PDF solo de imágenes escaneadas no tiene ninguna letra para leer — envía una versión con texto seleccionable. ¿Planilla de Excel? Guárdala como CSV primero." },
   "…ou cole o texto aqui": { es: "…o pega el texto aquí" },
   "Sem uma chave da OpenAI, o material fica guardado e esperando — o agente só passa a conhecê-lo depois que a chave for cadastrada.": { es: "Sin una clave de OpenAI, el material queda guardado y esperando — el agente solo pasa a conocerlo después de que la clave sea registrada." },
   "São estes os trechos que ele procura antes de responder. Quando ele erra sobre este assunto, é aqui que se vê o porquê.": { es: "Estos son los fragmentos que busca antes de responder. Cuando se equivoca sobre este tema, aquí se ve por qué." },
@@ -7443,7 +7457,7 @@ export const DICIONARIO: Traducoes = {
   "Uma tela não folheia mil pedaços — o restante está no acervo e o agente alcança todos.": { es: "Una pantalla no hojea mil pedazos — el resto está en el acervo y el agente los alcanza todos." },
   "Perguntas e respostas": { es: "Preguntas y respuestas" },
   "As dúvidas que se repetem, com a resposta pronta. É o formato que o agente cita melhor, porque cada resposta chega inteira.": { es: "Las dudas que se repiten, con la respuesta lista. Es el formato que el agente cita mejor, porque cada respuesta llega entera." },
-  "Um texto do seu negócio — política de troca, tabela de preços, manual, contrato. Envie o arquivo (PDF, Markdown ou texto) ou cole o conteúdo.": { es: "Un texto de tu negocio — política de cambios, lista de precios, manual, contrato. Envía el archivo (PDF, Markdown o texto) o pega el contenido." },
+  "Um texto do seu negócio — política de troca, tabela de preços, manual, contrato. Envie o arquivo (PDF, Markdown, CSV ou texto) ou cole o conteúdo.": { es: "Un texto de tu negocio — política de cambios, lista de precios, manual, contrato. Envía el archivo (PDF, Markdown, CSV o texto) o pega el contenido." },
   "Conversas anteriores": { es: "Conversaciones anteriores" },
   "Atendimentos já resolvidos que alguém marcou como aproveitáveis, com os dados pessoais removidos.": { es: "Atenciones ya resueltas que alguien marcó como aprovechables, con los datos personales quitados." },
   "Entra sozinha: conversas resolvidas que alguém marcar como aproveitáveis pela IA são anonimizadas e indexadas em lote.": { es: "Entra sola: las conversaciones resueltas que alguien marque como aprovechables por la IA se anonimizan y se indexan en lote." },
@@ -7934,6 +7948,24 @@ export const DICIONARIO: Traducoes = {
   "Preencha o identificador e o token para poder salvar.":
     { es: "Completa el identificador y el token para poder guardar." },
 
+  // ─── Configurações → Conversões: card do Google Ads (migration 0307) ───
+  "Google Ads": { es: "Google Ads" },
+  "Autorize o acesso à conta de anúncios do Google. Depois de autorizar, você informa aqui qual conta e qual ação de conversão recebem as vendas.":
+    { es: "Autoriza el acceso a la cuenta publicitaria de Google. Después de autorizar, indicas aquí qué cuenta y qué acción de conversión reciben las ventas." },
+  "Conectar com Google": { es: "Conectar con Google" },
+  "Conta de anúncios (Customer ID)": { es: "Cuenta publicitaria (Customer ID)" },
+  "10 dígitos. Com ou sem hífen — tanto faz, a gente limpa.":
+    { es: "10 dígitos. Con o sin guion — da igual, nosotros lo limpiamos." },
+  "Conta de gerente (opcional)": { es: "Cuenta de gerente (opcional)" },
+  "Preencha só se você acessa a conta acima através de uma conta MCC/gerente.":
+    { es: "Completa solo si accedes a la cuenta de arriba a través de una cuenta MCC/gerente." },
+  "Ação de conversão": { es: "Acción de conversión" },
+  "O ID da ação de conversão dentro da conta acima, que vai receber os envios de venda.":
+    { es: "El ID de la acción de conversión dentro de la cuenta de arriba, que va a recibir los envíos de venta." },
+  "Enviar vendas para o Google Ads": { es: "Enviar ventas a Google Ads" },
+  "Google Ads autorizado. Agora informe a conta e a ação de conversão abaixo.":
+    { es: "Google Ads autorizado. Ahora indica la cuenta y la acción de conversión abajo." },
+
   // Convidado do compromisso (agenda)
   "E-mail do convidado": { es: "Correo del invitado" },
   "opcional": { es: "opcional" },
@@ -8185,7 +8217,8 @@ export const DICIONARIO: Traducoes = {
   "Esse funil não está mais na sua lista. Recarregue a página e tente de novo.": {
     es: "Ese embudo ya no está en tu lista. Recarga la página e intenta de nuevo.",
   },
-  "Não sei ler esse tipo de arquivo. Envie PDF, Markdown (.md) ou texto (.txt).": { es: "No sé leer ese tipo de archivo. Envía PDF, Markdown (.md) o texto (.txt)." },
+  "Não sei ler esse tipo de arquivo. Envie PDF, Markdown (.md), CSV (.csv) ou texto (.txt).": { es: "No sé leer ese tipo de archivo. Envía PDF, Markdown (.md), CSV (.csv) o texto (.txt)." },
+  "Não leio Excel diretamente — no Excel use \"Salvar como\" → \"CSV UTF-8 (delimitado por vírgulas)\" e envie o CSV.": { es: "No leo Excel directamente — en Excel usa \"Guardar como\" → \"CSV UTF-8 (delimitado por comas)\" y envía el CSV." },
   "não consegui extrair texto deste PDF. Se ele for só imagens escaneadas, não há letra nenhuma para ler — envie uma versão com texto selecionável.": {
     es: "no conseguí extraer texto de este PDF. Si son solo imágenes escaneadas, no hay ninguna letra para leer — envía una versión con texto seleccionable.",
   },
@@ -9239,6 +9272,21 @@ export const DICIONARIO: Traducoes = {
   "Um material marcado aqui foi arquivado no acervo — o agente não lê mais ele.": { es: "Un material marcado aquí fue archivado en el acervo — el agente ya no lo lee." },
   "Materiais marcados aqui foram arquivados no acervo — o agente não lê mais eles.": { es: "Materiales marcados aquí fueron archivados en el acervo — el agente ya no los lee." },
   "Desmarque para voltar a salvar.": { es: "Desmárcalo para volver a guardar." },
+  // ── Erros do acervo de conhecimento que CHEGAM À TELA ──────────────────────
+  // Eles saem de `lib/ai/rag/extractors/csv.ts` e de `lib/ai/rag/ingest/documento.ts`
+  // e são renderizados por `t(err.message)` na rota de upload. O gate de espanhol
+  // NÃO alcança `app/api/**` (a varredura ignora a pasta), então quem garante a
+  // tradução aqui é esta entrada, não o CI — por isso ela vem com este comentário.
+  "a planilha está vazia": { es: "la planilla está vacía" },
+  "a planilha só tem cabeçalho, sem linha de dado nenhuma": {
+    es: "la planilla solo tiene encabezado, sin ninguna fila de datos",
+  },
+  "nenhuma linha tem conteúdo para indexar": {
+    es: "ninguna fila tiene contenido para indexar",
+  },
+  "não leio Excel diretamente — no Excel use \"Salvar como\" → \"CSV UTF-8 (delimitado por vírgulas)\" e envie o CSV.": {
+    es: "no leo Excel directamente — en Excel usa \"Guardar como\" → \"CSV UTF-8 (delimitado por comas)\" y envía el CSV.",
+  },
   // As chaves do gatilho de dias até a data do funil. Medidas pela tela em
   // `tests/unit/i18n-espanhol-cobre-a-tela.test.ts`: sem elas o gatilho novo
   // sairia inteiro em português para quem escolheu espanhol.

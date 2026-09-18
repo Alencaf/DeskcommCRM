@@ -538,6 +538,33 @@ async function processEnrollment(
       return;
     }
     if (!(error instanceof StaleServiceBoundaryError)) throw error;
+    // ⚠️ A ESPERA LONGA MORRE AQUI, E NÃO PODE MORRER CALADA.
+    //
+    // A fronteira é congelada quando a inscrição nasce, e fica stale quando a
+    // conversa fecha, a demanda fecha ou `service_revision` muda — o que, num
+    // retorno de semanas, é provável e é justamente o que caracteriza um
+    // retorno: o atendimento que o originou ACABOU. Quem espera dias volta e
+    // encontra a inscrição cancelada com um motivo que parece rotina.
+    //
+    // Reancorar aqui não é opção: `beginServiceAtOrigin` é explícito em
+    // "nunca usado por job/tick/retry", e fronteira nula é recusada de
+    // propósito (`assertCurrentServiceBoundary`, e o teste que a vigia). Enquanto
+    // a decisão de arquitetura não vem, o dever é tornar a perda VISÍVEL — um
+    // acompanhamento que some sem aviso é a ilha que a doutrina proíbe.
+    if (enrollment.status === "dormente") {
+      const nome =
+        (await db.loadFlowPointerName(enrollment.organization_id, enrollment.pointer_id)) ??
+        enrollment.pointer_id;
+      await db.insertDeadInboxItem({
+        organization_id: enrollment.organization_id,
+        title: "Um retorno programado não pôde ser enviado",
+        body:
+          `O fluxo "${nome}" esperava a data do retorno, mas o atendimento que o originou ` +
+          `foi encerrado ou substituído no meio da espera, e o envio foi cancelado ` +
+          `(enrollment ${enrollment.id}). Fale com o contato por outro caminho se ainda fizer sentido.`,
+        ref_id: enrollment.id,
+      });
+    }
     await db.updateEnrollment(enrollment.id, enrollment.organization_id, { status: "cancelled", cancel_reason: "Atendimento encerrado ou substituído", claimed_until: null, completed_at: clock().toISOString() });
     return;
   }

@@ -268,8 +268,14 @@ jobs:
     # corte. É o maior item das duas partes depois de `prova-painel-provedores`,
     # e move sozinho quase exatamente o que falta.
     #
-    # Um arquivo só, e não três de peso médio, porque as duas partes rodam
-    # contra o MESMO banco sem reset: cada spec movida é uma vizinhança nova.
+    # Um arquivo só, e não três de peso médio, porque as duas partes rodavam
+    # contra o MESMO banco sem reset: cada spec movida era uma vizinhança nova.
+    # ⚠️ ESTA FRASE VENCEU e fica como registro do que valia: hoje `supabase
+    # start` é passo do PRÓPRIO `e2e-parte`, e a matriz dá um runner (e um banco)
+    # por parte. Mover spec entre partes deixou de criar vizinhança de DADO; o
+    # que sobra é vizinhança de ORDEM dentro da parte, que o Playwright resolve
+    # em ordem alfabética de arquivo. Conferir na fonte, não nesta linha:
+    # `grep -n "supabase start" .github/workflows/e2e.yml` e o job em que ele cai.
     # `navegacao` é a que tem menos aresta — só afirma cromo de navegação
     # (sidebar, abas, ⌘K, medidas de layout), não lê dado semeado por vizinha
     # nenhuma, e a precondição dela (`afirmarAdminDeTenantPuro`) é satisfeita em
@@ -315,6 +321,49 @@ jobs:
     # deixa de ser a partição e passa a ser uma terceira parte: o setup de
     # 8-9 min é pago por parte, então três partes custam ~9 min de runner a mais
     # e devolvem ~9 min de relógio a cada uma.
+    # ── 2026-09-18: a parte 3 estourou o teto, e a folga estava toda na 1 ──
+    #
+    # Medido no run 35339808887 (PR de release 1.35.0): parte 1 = 15,9 min de
+    # relógio, parte 2 = 28,4 min, parte 3 = CANCELADA em 30 min 17 s com 91 de
+    # 93 casos. Somando só o tempo de Playwright, por parte:
+    #
+    #     parte 1 →  9,4 min (134 casos)   ← 13 min de folga ociosa
+    #     parte 2 → 22,1 min (131 casos)
+    #     parte 3 → 23,6 min ( 90 casos)   ← piso: 2 casos não chegaram a medir
+    #
+    # O setup (Supabase + baseline + build + browser + seeds) custa ~6,5 min por
+    # parte, e é pago três vezes. Total de 55,1 min de casos em três partes dá
+    # 18,4 min cada como ponto de equilíbrio — e era isso que estava torto.
+    #
+    # Três arquivos mudam de lista, escolhidos pelo relógio e pela vizinhança:
+    #
+    #   `prova-painel-provedores` (4,03 min)  PARTE_2 → PARTE_1. Volta para onde
+    #       estava antes de 2026-09-04.
+    #   `inbox-busca-e-filtros-dizem-a-verdade` (3,98 min)  PARTE_3 → PARTE_1.
+    #       É o maior item da parte 3, e a parte 1 já tem as outras `inbox-*`.
+    #   `agenda-google-meet` (0,92 min)  PARTE_3 → PARTE_2, onde já moram
+    #       `agenda-conectar-google` e as duas `agenda-ocupacao-do-google-*`.
+    #
+    # ⚠️ `navegacao` NÃO se move, e a razão é medida, não preferência. A primeira
+    # versão deste rebalanceamento a levava da 2 para a 1, e lá ela REPROVOU
+    # (run 35345305473, parte 1: 153 passaram, 1 falhou em 18,6 min):
+    #
+    #     navegacao.spec.ts:222 — "em 900px o menu inteiro tem de caber sem
+    #     scroll": esperado false, recebido true. `titulosFora` = 0, ou seja,
+    #     nenhum grupo saiu da dobra — o menu passa do alto por pouco.
+    #
+    # A mesma spec passa na PARTE_2. A diferença não é a partição: é o ESTADO do
+    # banco daquela parte (cada parte tem o seu), que muda o que o menu mostra.
+    # Ou seja, o menu está no limite e alguma vizinhança da parte 1 o empurra —
+    # sinal de PRODUTO, não de CI, e por isso vira item próprio em vez de virar
+    # uma partição escolhida para esconder o vermelho. Quem for atrás: rodar
+    # `navegacao` na parte 1 e ler `nav.scrollHeight` contra a altura visível.
+    #
+    # PREVISÃO (é previsão; a rodada deste PR é que mede): 18,0 / 18,4 / 18,7 min
+    # de casos, ou ~25 min de relógio por parte, com ~5 min de folga cada.
+    #
+    # O teto de 30 min continua fora de discussão: ele é o que denuncia a suíte
+    # crescendo, e foi exatamente o que aconteceu aqui.
     env:
       # Provider controlado; preview/assistência executam core, ferramentas e gates reais.
       INTERNAL_AGENT_RUN_STUB: "true"
@@ -346,6 +395,8 @@ jobs:
         lote-no-quadro-do-funil.spec.ts
         motivos-de-perda-do-funil.spec.ts
         importar-leads-planilha.spec.ts
+        inbox-busca-e-filtros-dizem-a-verdade.spec.ts
+        prova-painel-provedores.spec.ts
         relatorio-de-atividades.spec.ts
         qa-l12-inbox.spec.ts
         qa-l12-troca-de-funil.spec.ts
@@ -457,7 +508,8 @@ jobs:
         agenda-google-volta-do-consentimento.spec.ts
         agenda-google-volta-nao-desloga.spec.ts
         qa-l12-funil.spec.ts
-        navegacao.spec.ts prova-painel-provedores.spec.ts
+        navegacao.spec.ts
+        agenda-google-meet.spec.ts
       # `moeda-da-organizacao` entrou na PARTE_2 em 2026-09-04, ao lado de
       # `navegacao` — mesmo domínio (Configurações) e a mesma ausência de
       # dependência: sem WAHA, Resend, Nuvemshop ou Redis. Toca a organização
@@ -643,7 +695,6 @@ jobs:
         central-avisos-destino.spec.ts
         agenda-presenca-recuperacao.spec.ts
         agenda-google-sync.spec.ts
-        agenda-google-meet.spec.ts
         encerramento-atendimento.spec.ts
         interface-por-vinculo.spec.ts
         olhar-telas-do-epico.spec.ts
@@ -668,7 +719,6 @@ jobs:
         central-avisos-resolver-em-lote.spec.ts
         voz-desligada-por-padrao.spec.ts
         voz-primeiro-pareamento.spec.ts
-        inbox-busca-e-filtros-dizem-a-verdade.spec.ts
         qa-titulos-das-telas.spec.ts
         qa-equipe-pinta-na-hora.spec.ts
         qa-sugestao-rejeitada-e-motivo.spec.ts

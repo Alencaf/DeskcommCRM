@@ -13,6 +13,15 @@ import { fraseDeConfirmacao } from "./vocabulario";
 export type EnrollmentStatus =
   | "active"
   | "waiting_reply"
+  /**
+   * Espera longa imune à resposta (nó `wait` com `immune_to_reply`).
+   *
+   * TEM relógio como `active` — é o `next_eval_at` que a acorda —, mas está
+   * fora de `LIVE_STATUSES` em `reactivity.ts`, então a mensagem do contato não
+   * a cancela nem corta o timer, e fora do índice único anti-spam, então o
+   * contato continua podendo entrar noutra cadência enquanto dorme.
+   */
+  | "dormente"
   | "paused_handoff"
   | "completed"
   | "cancelled"
@@ -87,7 +96,7 @@ export type NodeResult =
   // no engine — seguir sem plano é um fato que o operador precisa poder ler.
   | { kind: "advance"; next_node_id: string; next_eval_at: Date; reason?: "plan_timeout"; repeat?: { index: number; total: number } }
   // stays on the node. `wake_status` parks `match_reply` in waiting_reply without a job.
-  | { kind: "wait"; next_eval_at: Date; wake_status?: "active" | "waiting_reply" }
+  | { kind: "wait"; next_eval_at: Date; wake_status?: "active" | "waiting_reply" | "dormente" }
   | {
       kind: "enqueue_turn";
       purpose: "send_message" | "classify" | "plan_timing";
@@ -511,7 +520,16 @@ export function processNode(input: {
             : planejada === null
               ? node.config.max_ms
               : clampEspera(planejada.escolhido_ms, node.config.min_ms, node.config.max_ms).escolhido_ms;
-        return { kind: "wait", next_eval_at: new Date(clock().getTime() + durationMs) };
+        // Espera imune dorme: o status tira a inscrição do alcance da
+        // reatividade (que decide por status, sem carregar o grafo) e libera o
+        // slot único anti-spam enquanto ela espera. Quem a acorda continua sendo
+        // o `next_eval_at` abaixo, pelo mesmo claim — não há segundo agendador.
+        const imune = node.config.mode === "fixed" && node.config.immune_to_reply === true;
+        return {
+          kind: "wait",
+          next_eval_at: new Date(clock().getTime() + durationMs),
+          ...(imune ? { wake_status: "dormente" as const } : {}),
+        };
       }
       const edge = selectEdge(edges, node.id, { type: "always" });
       if (!edge) return { kind: "fail", error: `wait node "${node.id}" has no outbound edge after elapsing` };

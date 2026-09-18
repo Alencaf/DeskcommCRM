@@ -221,6 +221,22 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "da organização viraram venda, e quem o lê é o servidor com o admin client " +
       "filtrando organization_id à mão (a tela `/app/settings/conversoes`).",
   },
+  {
+    tabela: "google_ads_landing_pages",
+    razao:
+      "tests/invariants/google-ads-captura-e-server-side.test.ts — mesmo desenho " +
+      "deny-all de ad_platform_connections (0213): RLS ligada, zero policies, " +
+      "grants revogados de anon/authenticated, organization_id NOT NULL com FK " +
+      "em cascata. Guarda para qual WhatsApp e com qual texto a landing page " +
+      "de captura de gclid redireciona.",
+  },
+  {
+    tabela: "google_ads_click_refs",
+    razao:
+      "tests/invariants/google-ads-captura-e-server-side.test.ts — mesmo " +
+      "`describe.each` da linha acima. Guarda o `gclid` de cada clique de " +
+      "anúncio e o token que o liga à mensagem do WhatsApp.",
+  },
 ];
 
 /**

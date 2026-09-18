@@ -535,6 +535,9 @@ export const RESULTADOS_DO_FIM: Record<ResultadoDoFim, string> = {
 export const SITUACOES_DO_ACOMPANHAMENTO: Record<EnrollmentStatus, string> = {
   active: "Em andamento",
   waiting_reply: "Aguardando resposta",
+  // Não é "pausado": ninguém a parou e ela tem hora para voltar. Quem lê a fila
+  // precisa saber que este acompanhamento está vivo e só não fala agora.
+  dormente: "Aguardando a data do retorno",
   paused_handoff: "Pausado — um humano assumiu",
   completed: "Concluído",
   cancelled: "Cancelado",

@@ -79,6 +79,7 @@ export type TomDoStatus = "neutral" | "success" | "warning" | "error" | "info";
 const STATUS: Record<string, { rotulo: string; tom: TomDoStatus }> = {
   active: { rotulo: "Ativo", tom: "success" },
   waiting_reply: { rotulo: "Aguardando resposta", tom: "info" },
+  dormente: { rotulo: "Aguardando a data do retorno", tom: "info" },
   paused_handoff: { rotulo: "Pausado (atendimento humano)", tom: "warning" },
   paused_manual: { rotulo: "Pausado por uma pessoa", tom: "warning" },
   completed: { rotulo: "Concluído", tom: "neutral" },

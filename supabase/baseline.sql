@@ -11825,7 +11825,7 @@ begin
        and rel.relname = 'followup_enrollments'
        and con.contype = 'c'
        and pg_get_constraintdef(con.oid) like '%paused_handoff%'
-       and pg_get_constraintdef(con.oid) not like '%paused_manual%'
+       and pg_get_constraintdef(con.oid) not like '%dormente%'
   loop
     execute format('alter table public.followup_enrollments drop constraint %I', c.conname);
   end loop;
@@ -11834,14 +11834,14 @@ end $$;
 do $$ begin
   alter table public.followup_enrollments
     add constraint followup_enrollments_status_valido
-    check (status in ('active','waiting_reply','paused_handoff','paused_manual','completed','cancelled','dead'));
+    check (status in ('active','waiting_reply','dormente','paused_handoff','paused_manual','completed','cancelled','dead'));
 exception when duplicate_object then null; end $$;
 
 do $$ begin
   alter table public.followup_enrollments
     add constraint followup_enrollments_relogio_coerente
     check (
-      (status in ('active','waiting_reply') and next_eval_at is not null)
+      (status in ('active','waiting_reply','dormente') and next_eval_at is not null)
       or (status in ('paused_handoff','paused_manual','completed','cancelled','dead'))
     );
 exception when duplicate_object then null; end $$;
@@ -27575,6 +27575,184 @@ grant execute on function public.fn_mark_conversation_message(uuid,text,text,tim
 
 notify pgrst, 'reload schema';
 
+-- ---- a espera longa dorme: status `dormente` (migration 0308) ----
+--
+-- A espera longa de um fluxo passa a sobreviver ao contato mandar mensagem, que
+-- é o que faltava para uma cadência de retorno ("volte a falar daqui a 28 dias")
+-- caber num fluxo em vez de morar no prompt do agente. Duas coisas a matavam, as
+-- duas caladas: `lib/followup/reactivity.ts` ou CANCELA a inscrição parada num
+-- `wait` (`cancel_on_reply`) ou grava `inbound_woke` e CORTA o timer; e o índice
+-- único anti-spam trancaria o contato fora de qualquer outra cadência por um mês.
+--
+-- O status `dormente` é a projeção em runtime de `wait.immune_to_reply` (campo do
+-- nó, no grafo pinado) — não uma coluna `imune`, que seria segunda verdade sobre o
+-- mesmo fato. Ele faz a feature custar ZERO na reatividade: `LIVE_STATUSES` não o
+-- inclui, então a inscrição dormente nem é carregada (a exceção deliberada é o
+-- opt-out, que alcança todo mundo).
+--
+-- ⚠️ OS DOIS CHECKs NÃO ESTÃO AQUI, DE PROPÓSITO. Eles vivem no bloco da 0145
+-- ("o dossiê do follow-up"), que já os derruba e recria — e `dormente` foi
+-- acrescentado LÁ, no vocabulário final. Um segundo bloco reconstruindo a mesma
+-- constraint deixa a tabela SEM constraint entre o drop de um e o add do outro
+-- quando o `update.sh` reaplica o arquivo, e é reprovado por
+-- `tests/unit/baseline-constraint-reconstruida.test.ts`. O que sobra aqui é só o
+-- que não existia antes: o índice do claim e a função que passa a enxergá-lo.
+--
+-- O índice único anti-spam (`idx_followup_enrollments_one_live`) também NÃO é
+-- tocado: ele enumera os status que ocupam vaga, e `dormente` fica de fora por
+-- construção — a vaga é liberada sem uma linha de DDL sobre ele.
+
+-- ---- 3. o claim tem de enxergar o dormente ---------------------------------
+--
+-- ⚠️ É AQUI QUE ESTA MIGRATION FALHA CALADA se alguém a encurtar. Sem `dormente`
+-- nas duas listas da função, a inscrição dorme e NUNCA acorda: nada reclama a
+-- linha, nada reprova, e o retorno simplesmente não acontece no dia 28.
+create index if not exists idx_followup_enrollments_due_por_org
+  on public.followup_enrollments (organization_id, next_eval_at)
+  where status in ('active','waiting_reply','dormente');
+
+create or replace function fn_claim_due_followup_enrollments(p_limit int, p_lease_seconds int)
+returns setof followup_enrollments
+language sql
+security definer
+set search_path = public
+as $$
+  with orgs as (
+    -- Sem a condição de claim aqui de propósito: o lateral abaixo a aplica, e uma
+    -- organização cujos vencidos estão todos com lease apenas devolve zero linhas.
+    select distinct organization_id
+      from followup_enrollments
+     where status in ('active','waiting_reply','dormente')
+       and next_eval_at <= now()
+  ),
+  fila as (
+    select f.id, f.next_eval_at, f.posicao_na_org
+      from orgs
+      cross join lateral (
+        select d.id,
+               d.next_eval_at,
+               row_number() over (order by d.next_eval_at) as posicao_na_org
+          from followup_enrollments d
+         where d.organization_id = orgs.organization_id
+           and d.status in ('active','waiting_reply','dormente')
+           and d.next_eval_at <= now()
+           and (d.claimed_until is null or d.claimed_until < now())
+         order by d.next_eval_at
+         limit p_limit
+      ) f
+  ),
+  escolhidos as (
+    -- O rodízio: posição 1 de todas as organizações, depois a 2 de todas, etc.
+    -- Empate na mesma posição vai para quem esperou mais.
+    select id from fila order by posicao_na_org, next_eval_at limit p_limit
+  ),
+  travados as (
+    select e.id from followup_enrollments e
+     where e.id in (select id from escolhidos)
+     for update skip locked
+  )
+  update followup_enrollments e
+     set claimed_until = now() + make_interval(secs => p_lease_seconds),
+         updated_at = now()
+   where e.id in (select id from travados)
+     -- A condição de lease É REPETIDA AQUI, e não é redundante com a CTE `fila`.
+     -- Sem ela, duas conexões simultâneas reclamam as MESMAS linhas: a segunda
+     -- espera o lock da primeira, e quando ele sai o Postgres (READ COMMITTED)
+     -- reavalia só o WHERE do UPDATE — que não olhava `claimed_until` — e grava
+     -- por cima. O `skip locked` da CTE não salva: as duas materializam a mesma
+     -- lista antes de qualquer lock existir. Medido: interseção de 5 em 5 no
+     -- invariante de concorrência (followup-schema.test.ts).
+     and (e.claimed_until is null or e.claimed_until < now())
+  returning e.*;
+$$;
+
+revoke execute on function fn_claim_due_followup_enrollments(int, int) from public, anon, authenticated;
+grant execute on function fn_claim_due_followup_enrollments(int, int) to service_role;
+
+notify pgrst, 'reload schema';
+
+
+-- ---- Google Ads: landing page de captura de gclid (migration 0306) ----
+-- `lib/plataformas-de-anuncio/registry.ts` (0213) já declarava por que `google_ads`
+-- não tem transporte de conversão: sem extrator de gclid não há o que reportar.
+-- Faltava a LANDING PAGE que captura o clique e o carrega para dentro da
+-- conversa do WhatsApp (o Google Ads, ao contrário da Meta, não tem um
+-- "Clique para o WhatsApp" nativo). Duas tabelas: para onde a landing
+-- redireciona, e o par token-curto↔gclid criado no clique e consultado quando
+-- a mensagem chega. Mesmo desenho server-side-only de `ad_platform_connections`
+-- (0213): RLS ligada sem policies, grants de anon/authenticated revogados.
+
+create table if not exists public.google_ads_landing_pages (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  whatsapp_e164 text not null,
+  message_template text not null default 'Olá! Vim pelo anúncio e quero saber mais. [ref:{token}]',
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  constraint google_ads_landing_pages_template_tem_placeholder
+    check (message_template like '%{token}%')
+);
+
+comment on table public.google_ads_landing_pages is
+  'Configuração da landing page de captura de gclid, por organização: para qual WhatsApp e com qual texto pré-preenchido ela redireciona. Server-side only.';
+comment on column public.google_ads_landing_pages.message_template is
+  'Precisa conter o literal {token}: é onde o código do clique é injetado antes do redirect para o wa.me.';
+
+alter table public.google_ads_landing_pages enable row level security;
+revoke all on public.google_ads_landing_pages from anon, authenticated;
+grant select, insert, update, delete on public.google_ads_landing_pages to service_role;
+
+drop trigger if exists trg_google_ads_landing_pages_updated_at on public.google_ads_landing_pages;
+create trigger trg_google_ads_landing_pages_updated_at
+  before update on public.google_ads_landing_pages
+  for each row execute function public.fn_set_updated_at();
+
+create table if not exists public.google_ads_click_refs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  token text not null,
+  gclid text not null,
+  query_raw jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  matched_at timestamptz,
+  contact_id uuid references public.contacts(id) on delete set null
+);
+
+create unique index if not exists google_ads_click_refs_org_token_uk
+  on public.google_ads_click_refs (organization_id, token);
+
+comment on table public.google_ads_click_refs is
+  'Par token curto ↔ gclid, criado quando a landing page recebe um clique de anúncio e consultado quando a mensagem do WhatsApp chega com o token no texto. Server-side only.';
+comment on column public.google_ads_click_refs.token is
+  'Código opaco no texto pré-preenchido do wa.me — não o gclid cru, que fica só nesta linha.';
+comment on column public.google_ads_click_refs.matched_at is
+  'Carimbado no match com a mensagem recebida. Um clique só casa uma vez: a UPDATE que o faz é condicional a matched_at is null.';
+
+alter table public.google_ads_click_refs enable row level security;
+revoke all on public.google_ads_click_refs from anon, authenticated;
+grant select, insert, update, delete on public.google_ads_click_refs to service_role;
+
+-- ---- Google Ads: credencial de conversão (migration 0307) ----
+-- Refresh token OAuth (não access token longo-vivo) + os três identificadores
+-- que dizem para onde reportar dentro da conta. Mesmo desenho server-side-only
+-- de ad_platform_connections (0213); ver o cabeçalho da migration 0307 para o
+-- racional completo.
+
+alter table public.ad_platform_connections
+  add column if not exists google_refresh_token_encrypted bytea,
+  add column if not exists google_customer_id text,
+  add column if not exists google_login_customer_id text,
+  add column if not exists google_conversion_action_id text;
+
+comment on column public.ad_platform_connections.google_refresh_token_encrypted is
+  'Refresh token OAuth do Google Ads, cifrado por fn_encrypt_oauth. Só platform=google_ads usa esta coluna — o access token derivado dele expira em ~1h e nunca é persistido.';
+comment on column public.ad_platform_connections.google_customer_id is
+  'A conta de anúncios do Google Ads (10 dígitos, sem hífen) para onde a organização reporta conversões.';
+comment on column public.ad_platform_connections.google_login_customer_id is
+  'A conta de GERENTE (MCC) através da qual google_customer_id é acessada, quando aplicável. NULL = acesso direto, sem MCC.';
+comment on column public.ad_platform_connections.google_conversion_action_id is
+  'Qual ação de conversão, dentro de google_customer_id, recebe os envios de venda. Formato: só o id numérico, o resource name completo é montado no transporte.';
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
@@ -27782,6 +27960,17 @@ alter table public.ai_reply_drafts
 
 notify pgrst, 'reload schema';
 
+-- ---- CSV como material de conhecimento (migration 0310) ----
+-- O bucket `ai-policy` (acima, migration 0014) tinha `allowed_mime_types`
+-- fechado em PDF/Markdown/texto. O acervo de IA passou a aceitar CSV
+-- (lib/ai/rag/extractors/csv.ts) — sem esta linha o Storage recusa o upload
+-- ANTES de qualquer código da aplicação rodar, com erro sem relação nenhuma
+-- com "extensão não suportada". `update`, não `insert ... on conflict`: o
+-- bucket já existe em todo clone; é a MIME list que precisa alcançar quem
+-- instalou antes desta mudança.
+update storage.buckets
+set allowed_mime_types = array['application/pdf', 'text/markdown', 'text/x-markdown', 'text/plain', 'text/csv']
+where id = 'ai-policy';
 -- ---- travas do modo somente leitura do suporte, depois de toda tabela (migration 0274) ----
 --
 -- ⚠️ ESTA CHAMADA É O ÚLTIMO BLOCO DO ARQUIVO. Tabela nova, coluna

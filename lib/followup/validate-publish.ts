@@ -25,6 +25,7 @@ export const PUBLISH_ERROR_CODES = [
   'check_stage_archived',
   'grace_too_short',
   'long_wait_needs_template',
+  'immune_wait_too_short',
   'cycle_without_wait',
   'max_steps_exceeded',
 ] as const;
@@ -427,6 +428,23 @@ export function validateFlowForPublish(
         node_id: null,
         code: 'max_steps_exceeded',
         message: `O caminho mais longo a partir do trigger excede ${MAX_PATH_STEPS} passos.`,
+      });
+    }
+  }
+
+  // Espera imune é para cadência LONGA. Uma imune de dez minutos prende um lead
+  // no meio da conversa: ele responde, e nada no motor encurta a espera — que é
+  // exatamente o que a imunidade promete, e exatamente o que ninguém quer num
+  // intervalo curto. O piso é o mesmo 24h que já separa espera curta de longa.
+  for (const node of [...nodes].sort(byId)) {
+    if (node.type !== 'wait') continue;
+    const cfg = node.config;
+    if (cfg.mode !== 'fixed' || cfg.immune_to_reply !== true) continue;
+    if (cfg.duration_ms < LONG_WAIT_THRESHOLD_MS) {
+      errors.push({
+        node_id: node.id,
+        code: 'immune_wait_too_short',
+        message: `Nó "${node.id}" é imune à resposta e precisa de pelo menos 24h de espera.`,
       });
     }
   }

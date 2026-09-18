@@ -844,7 +844,12 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
   "oauth2.googleapis.com": {
     categoria: "FORNECEDOR",
     motivo:
-      "endpoint de token do OAuth do Google — o par de `accounts.google.com` no fluxo de autorização da agenda.",
+      "endpoint de token do OAuth do Google — o par de `accounts.google.com` no fluxo de autorização da agenda, e também do Google Ads (`lib/plataformas-de-anuncio/google/token.ts`).",
+  },
+  "googleads.googleapis.com": {
+    categoria: "FORNECEDOR",
+    motivo:
+      "endpoint da Google Ads API, para onde `lib/plataformas-de-anuncio/google/conversions.ts` reporta a venda de volta ao anúncio que trouxe o lead. Irmão de `graph.facebook.com` no eixo da Meta: é contrato do fornecedor, não escolha nossa — a conta de anúncios é do cliente, o domínio é do Google.",
   },
   "accounts.google.com": {
     categoria: "FORNECEDOR",

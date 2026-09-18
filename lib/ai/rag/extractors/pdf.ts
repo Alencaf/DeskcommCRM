@@ -165,12 +165,33 @@ function traduzirErro(err: unknown): PdfExtractError {
   // Sem esta mensagem, quem instalou vê "DOMMatrix is not defined" e não tem como
   // ligar isso a uma dependência que ele nem sabe que existe. O diagnóstico custa
   // 4 linhas; a caçada custa uma tarde.
+  //
+  // ⚠️ A INSTRUÇÃO É PARA QUEM VAI LÊ-LA, e quem lê NÃO é quem desenvolve.
+  // `extrairTextoDoArquivo` não repassa esta frase para a tela — de propósito:
+  // a pessoa recebe sempre "não consegui extrair texto deste PDF…", e é o
+  // `console.error("[extracao-pdf] falha de infraestrutura…")` que carrega ESTA
+  // mensagem. O leitor, portanto, é quem abre o log do contêiner: o dono da VPS.
+  // A versão anterior mandava "reinstale as dependências (`pnpm install`, não
+  // `--no-optional`)", e num self-host não há `node_modules` para reinstalar —
+  // a imagem Docker é pré-buildada no CI e o kit não expõe passo nenhum de
+  // instalação de pacote (doutrina de packaging: nada constrói na máquina do
+  // cliente). Instrução impossível de seguir lê como "está quebrado e não há o
+  // que fazer".
+  //
+  // O que ele PODE fazer está escrito, e sem prometer: atualizar a instalação
+  // resolve QUANDO a imagem publicada já traz o binário — não resolve se a poda
+  // aconteceu no build —, e o caminho que sempre existe é avisar quem instalou.
+  // A causa não é suavizada: o nome do pacote fica, porque é ele que quem
+  // instalou vai procurar.
   const mensagem = err instanceof Error ? err.message : String(err);
   if (/DOMMatrix|@napi-rs\/canvas/.test(mensagem)) {
     return new PdfExtractError(
-      "Extração de PDF indisponível: o binário nativo @napi-rs/canvas não foi instalado " +
-        "nesta plataforma. Reinstale as dependências SEM podar as opcionais " +
-        "(`pnpm install`, não `--no-optional`). Até lá, PDFs não são lidos.",
+      "Extração de PDF indisponível nesta instalação: falta o binário nativo " +
+        "@napi-rs/canvas, que o leitor de PDF usa. Não é o arquivo enviado — não há nada " +
+        "a corrigir nele. Atualize a instalação (`bash update.sh`); se o erro " +
+        "continuar, avise quem instalou o sistema, porque o binário ficou de fora da " +
+        "imagem. Enquanto isso, o mesmo conteúdo em texto (.txt), Markdown (.md) ou " +
+        "CSV (.csv) é lido normalmente.",
       err,
     );
   }
