@@ -72,7 +72,24 @@ env:
 # run de outro que aponte para a mesma ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Aqui a regra é mais larga que nos outros três workflows, e de propósito.
+  #
+  # Cancela em PR (como os outros) E TAMBÉM em push na `main`. A tag `latest`
+  # significa "topo da main" (docs/doctrine/packaging.md, invariante 3), então
+  # construir e publicar a imagem de um commit intermediário da main não serve a
+  # ninguém: o commit seguinte a substitui minutos depois. Medido em 18/09/2026,
+  # a fila tinha 21 rodadas deste workflow empilhadas na `main` — a 14,6 min de
+  # runner cada, ~300 minutos para publicar uma imagem que já nasceu velha.
+  #
+  # NÃO cancela em tag. `refs/tags/v*` é um grupo por tag, e cada tag publica um
+  # número de versão imutável — cancelar ali deixaria uma versão anunciada sem
+  # artefato. `promover-stable` só roda em tag, então ele nunca é alcançado.
+  #
+  # E não cancelar aqui NÃO preserva medição nenhuma: um commit mais novo da
+  # `main` CONTÉM o anterior, então se o anterior quebrava a imagem, o novo
+  # também quebra. É diferente de `ci`/`e2e`, onde o vermelho cancelado é a
+  # única medida que existe daquela árvore.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
 
 jobs:
   # Nenhuma tag publica sem estar CONTIDA na `main`.
