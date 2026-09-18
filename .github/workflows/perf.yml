@@ -37,6 +37,20 @@ permissions:
 # run de outro que aponte para a mesma ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # `cancel-in-progress` só em PR: na `main`, o vermelho de um commit
+  # intermediário é a única medida que existe daquela árvore, e apagá-la deixa a
+  # integração sem cobertura.
+  #
+  # ⚠️ MAS ISSO NÃO É "a main nunca cancela", e a diferença foi MEDIDA (18/09):
+  # o GitHub guarda **uma única rodada PENDENTE por grupo**. Uma rodada da `main`
+  # que ainda não começou é cancelada quando a próxima chega, mesmo com
+  # `cancel-in-progress: false`. Só a que JÁ está rodando é preservada.
+  #
+  # O efeito prático é aceitável — a `main` mais nova é a que se mede, e ela
+  # contém a anterior. O que não era aceitável era a frase: quem lesse "a main
+  # nunca cancela" e visse uma rodada da `main` cancelada iria procurar um
+  # cancelador humano, que é o modo de falha nº 1 deste repositório
+  # (`timeout-minutes` também produz `cancelled`).
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
