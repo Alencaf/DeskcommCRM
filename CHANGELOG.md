@@ -146,6 +146,8 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
   Para quem opera um servidor, nada muda: isto acontece inteiramente na esteira de
   verificação do projeto, antes de qualquer versão ser publicada.
 
+  Medição do @webtecnica.
+
 - **O aviso de versão nova só aparece quando ela está pronta para instalar** A tela oferecia a versão nova **antes de ela estar pronta para instalar**. O aviso saía assim que a versão era publicada, mas o pacote que a VPS precisa baixar leva mais uns minutos para ficar pronto.
 
   Quem clicava nessa janela via a atualização parar no meio.
