@@ -515,6 +515,47 @@ jobs:
     #
     # O teto de 30 min continua fora de discussão: ele é o que denuncia a suíte
     # crescendo, e foi exatamente o que aconteceu aqui.
+    # ── 2026-09-19: a parte 3 ficou a mais apertada, e a causa é CRESCIMENTO ─
+    #
+    # Medido em 43 rodadas nossas com as TRÊS partes verdes, depois do
+    # rebalanceamento anterior (relógio do JOB, teto 1800s):
+    #
+    #     parte 1 → mediana 1543s · máx 1605 · folga do máx 195s
+    #     parte 2 → mediana 1419s · máx 1571 · folga do máx 229s
+    #     parte 3 → mediana 1551s · máx 1687 · folga do máx 113s  ← a apertada
+    #
+    # Mais pesada por rodada: a 3 em 24, a 1 em 15, a 2 em 4.
+    #
+    # ⚠️ A PARTE 3 SUBIU SOZINHA — 1443s de mediana antes, 1551s agora, sem
+    # ninguém mexer nas listas dela. Isso não é desequilíbrio de partição, é a
+    # SUÍTE CRESCENDO: specs entraram no dia. A partição só redistribui; ela não
+    # desfaz crescimento.
+    #
+    # Movimento: `agenda-presenca-recuperacao` (132,1s, 8 casos) PARTE_3 →
+    # PARTE_2, onde já moram as outras `agenda-*`. A parte 2 rodava 123 casos em
+    # 1089s de Playwright contra 93 casos em 1221s da parte 3 — ela é quem tem
+    # espaço. Previsão: a menor folga do conjunto sai de ~113s para ~200s.
+    #
+    # ── QUANDO TRÊS PARTES ACABAREM (a regra, para não virar decisão de susto)
+    #
+    # Redistribuir tem fim: com a suíte crescendo, uma hora nenhuma partição
+    # cabe. O degrau seguinte é uma QUARTA parte, e ele tem preço: ~6 min de
+    # setup por parte, pagos de novo, contra ~8 min de relógio devolvidos a cada
+    # uma. A regra, com a sonda que a mede:
+    #
+    #   ABRIR A QUARTA PARTE quando a MENOR FOLGA DO CONJUNTO ficar abaixo de
+    #   120s em 5 rodadas seguidas com as três partes verdes.
+    #
+    #   gh api --paginate "repos/OWNER/REPO/actions/runs?per_page=100" --jq \
+    #     '.workflow_runs[]|select(.name=="e2e" and .conclusion=="success")|.id' \
+    #   | head -5 | while read r; do gh api "repos/OWNER/REPO/actions/runs/$r/jobs" \
+    #       --jq '[.jobs[]|select((.name|startswith("e2e-parte")) and .conclusion=="success")
+    #             |1800-((.completed_at|fromdateiso8601)-(.started_at|fromdateiso8601))]|min'; done
+    #
+    # Cinco, e não uma: uma rodada ruim é ruído (o espalhamento medido entre
+    # rodadas chega a 180s); cinco seguidas abaixo de 120s é tendência. E a
+    # sonda exige `conclusion==success` nas duas pontas — rodada cancelada na
+    # fila fecha em segundos e faria a folga parecer enorme.
     env:
       # Provider controlado; preview/assistência executam core, ferramentas e gates reais.
       INTERNAL_AGENT_RUN_STUB: "true"
@@ -627,6 +668,7 @@ jobs:
       # `relogio-`, é aqui que se olha: ou ela vai para a PARTE_2, ou esta vai.
       SPECS_PARTE_2: >-
         agente-marca-consulta.spec.ts
+        agenda-presenca-recuperacao.spec.ts
         agenda-marcar-pela-tela.spec.ts
         agenda-remarcar-e-cancelar.spec.ts
         agenda-tipos-de-agendamento.spec.ts
@@ -856,7 +898,6 @@ jobs:
         roteamento-por-canal.spec.ts
         whatsapp-pareamento-por-codigo.spec.ts
         central-avisos-destino.spec.ts
-        agenda-presenca-recuperacao.spec.ts
         agenda-google-sync.spec.ts
         encerramento-atendimento.spec.ts
         passagem-com-contexto.spec.ts
