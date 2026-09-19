@@ -128,7 +128,7 @@ acessibilidade).
 | [`deploy-hostgator/README.md`](deploy-hostgator/README.md) | VPS HostGator (`install.sh`, `backup.sh`, `reset-mfa.sh`) |
 | [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md) | Checklist de deploy |
 | [`ATUALIZANDO.md`](ATUALIZANDO.md) | `update.sh`, `restore.sh`, `healthcheck.sh` |
-| [`runbooks/supabase-local-para-e2e.md`](runbooks/supabase-local-para-e2e.md) | **Supabase local para rodar e2e** — por que `supabase start` não basta, as três falhas medidas (kong 127, storage unhealthy, sem PostgREST), e a janela em que o `mv supabase/migrations` parece sabotagem |
+| [`runbooks/supabase-local-para-e2e.md`](runbooks/supabase-local-para-e2e.md) | **Supabase local para rodar e2e** — por que `supabase start` não basta, o padrão medido (qualquer serviço unhealthy derruba o conjunto; 3 tentativas, 3 serviços diferentes, ZERO sucesso), e a janela em que o `mv supabase/migrations` parece sabotagem |
 | [`runbooks/deploy.md`](runbooks/deploy.md) | **Deploy em produção — os dois `-f` do compose, verificação pós-deploy** |
 | [`runbooks/remediar-worker-congelado.md`](runbooks/remediar-worker-congelado.md) | **Incidente: o worker congelado** — diagnóstico (`diagnostico.sh`), impacto medido e as duas rotas de remediação. **Ainda não ensaiado** |
 | [`runbooks/ativar-packaging.md`](runbooks/ativar-packaging.md) | **Ativação da doutrina de packaging** — os 3 passos que não cabem num PR (pacote público, check obrigatório, primeira release) |

@@ -61,23 +61,39 @@ echo "movida por $0 (pid $$) para o supabase start; restaurada no fim" \
 Custa uma linha e transforma "287 arquivos sumiram" em uma frase que se lê em
 dois segundos.
 
-## As três falhas que eu encontrei, em ordem
+## As três falhas que eu encontrei — e o padrão é mais útil que a lista
 
-| # | sintoma | o que era |
+| # | serviço que caiu | mensagem |
 |---|---|---|
-| 1 | `supabase_kong_… Exited (127)` | o gateway não sobe; sem ele a API de `54321` não responde e o app não fala com o banco |
-| 2 | `supabase_storage_… container is not ready: unhealthy` — e o CLI **derruba tudo** | um serviço que o e2e desta spec nem usa impede o conjunto inteiro |
-| 3 | sobe `realtime/inbucket/auth/kong/db` mas **sem `rest`** | sem PostgREST não há API de dados; o app carrega e não lê nada |
+| 1 | `kong` | `supabase_kong_… Exited (127)` |
+| 2 | `storage` | `supabase_storage_… container is not ready: unhealthy` |
+| 3 | `realtime` | `supabase_realtime_… container is not ready: unhealthy` |
 
-Contorno para (1) e (2): suba só o que a sua spec precisa.
+**O padrão, que vale mais que os três nomes: qualquer serviço que não fique
+saudável derruba o conjunto inteiro.** Nas três tentativas o CLI respondeu
+`Stopping containers...` e voltou ao zero — inclusive quando o serviço que caiu
+não tinha relação nenhuma com o que eu ia testar.
+
+### ⚠️ O contorno abaixo NÃO está provado
+
+O caminho óbvio é pular os serviços que você não usa:
 
 ```bash
 supabase start -x storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
 ```
 
-> Antes de culpar a receita: `docker info` responde na hora enquanto
-> `docker ps` pode levar minutos — se o daemon acabou de subir, espere ele
-> estabilizar. `open -a Docker` e um laço de `until docker info >/dev/null`.
+**Medido: não resolveu.** Foi exatamente a minha terceira tentativa, e ela morreu
+em `realtime unhealthy` — um serviço que o `-x` acima não exclui. Os containers
+chegaram a subir (`realtime inbucket auth kong db`, **sem o `rest`**) e o CLI
+derrubou tudo em seguida.
+
+Fica registrado como **hipótese não confirmada**, e não como receita: excluir o
+serviço que caiu na SUA rodada pode funcionar, mas na minha o serviço que caiu
+mudou a cada tentativa. **Não dá para afirmar, com o que eu medi, que existe um
+conjunto de exclusões que faz o ambiente subir nesta máquina.**
+
+Se você conseguir subir, corrija este bloco com o comando que funcionou — é a
+informação que falta aqui.
 
 ## Antes de subir, pergunte se precisa
 
