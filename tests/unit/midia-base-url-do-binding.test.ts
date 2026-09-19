@@ -560,8 +560,21 @@ describe("worker de mídia: base_url do binding de visão (#855)", () => {
       // A lista autoriza ENDEREÇO, nunca credencial. O degrau que impede a
       // chave que paga a conta de todas as empresas de sair para um endereço
       // escolhido por uma delas (decisão 22-a) é independente desta lista.
+      //
+      // ⚠️ A ORIGEM DA CHAVE É DECLARADA, e não deduzida da variável de
+      // ambiente. Este caso dizia "com a chave da INSTALAÇÃO" no nome e montava
+      // só o `OPENROUTER_API_KEY` — o que bastava enquanto o worker deduzia a
+      // origem comparando o plaintext. O #1237 fez do resolvedor
+      // (`origemDaChave`) a fonte única, como o caso irmão "com endereço da
+      // organização e chave da INSTALAÇÃO" já fazia, e sem a declaração este
+      // aqui passou a montar uma credencial DA ORGANIZAÇÃO: aí quem recusa é o
+      // degrau do ENDEREÇO, com outra frase, e a asserção da credencial caiu.
+      //
+      // Nenhum dos dois PRs estava errado sozinho — #1004 (esta lista) e #1237
+      // (a régua de credencial) eram verdes separados e vermelhos juntos.
       comDestinosAutorizados("10.1.0.0/16");
       vi.stubEnv("OPENROUTER_API_KEY", "chave-do-binding");
+      credencial.origemDaChave = "chave_da_instalacao";
       bindingDaVez = { ...BINDING_COM_ENDPOINT, base_url: "http://10.1.2.7:8080/v1" };
 
       await deriveMessageMedia(eventRow());
