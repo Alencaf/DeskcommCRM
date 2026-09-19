@@ -8,6 +8,298 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.0.0] — 2026-09-19
+
+### ⚠️ Requer atenção
+
+- **Endereço próprio de IA passa a exigir a chave da própria empresa também no atendimento** Se alguma empresa desta instalação usa endereço próprio num ponto de IA sem ter a chave dela cadastrada e validada para o provedor desse ponto, as chamadas desse ponto passam a ser recusadas no instante em que a atualização entra — e, quando o ponto roda durante o atendimento, a IA dessa empresa pode parar de responder aos clientes. Antes de atualizar, abra Agente de IA › Provedores em cada empresa e, em todo ponto com endereço próprio preenchido, faça uma de duas coisas: cadastre e valide a chave da empresa para o provedor desse ponto, ou apague o endereço próprio para o ponto voltar ao provedor padrão da instalação. Se alguma escapar, o aviso "A IA recusou usar o endereço próprio desta empresa sem a chave dela" na Central diz qual ponto corrigir.
+
+### Adicionado
+
+- **Quando o atendimento automático trava, sua equipe é avisada no WhatsApp** Até agora, quando a inteligência artificial não conseguia resolver sozinha e precisava
+  de alguém, isso só aparecia numa tela do sistema. Quem toca uma empresa não fica com o
+  sistema aberto o dia todo — fica com o WhatsApp aberto. O cliente ficava esperando do
+  outro lado sem que ninguém tivesse sido avisado.
+
+  Agora dá para escolher um número de WhatsApp da equipe para receber esses avisos. Assim
+  que o atendimento trava, chega uma mensagem com o tipo do assunto, o primeiro nome do
+  cliente, o que ele precisa, por que a inteligência artificial parou, e um link que abre
+  direto o atendimento.
+
+  O aviso sai **na hora**, inclusive fora do horário comercial: o horário de envio existe
+  para não incomodar o cliente, e sua equipe não é cliente. O sistema continua respeitando
+  o intervalo entre mensagens do mesmo número, que é o que protege o número de ser
+  bloqueado pelo WhatsApp.
+
+  A mensagem nunca leva telefone, CPF nem o que o cliente escreveu — só o resumo que a
+  inteligência artificial fez. E responder àquele número não chega ao cliente: ele é só da
+  equipe. Tudo o que chegar nele é ignorado de propósito, e a tela mostra quantas mensagens
+  foram ignoradas para que esse silêncio não pareça defeito.
+
+  Você não precisa fazer nada agora: a atualização já traz tudo pronto, e o aviso só começa
+  a sair depois que alguém que administra escolher o número e a conexão.
+
+- **O comportamento da instalação ganha tela no Admin** Quatro decisões que valem para a instalação inteira passam a se tomar na tela **Comportamento** (`/admin/sistema`), em vez de editar arquivo de servidor:
+
+  - **Orçamento de IA** — se a IA respeita o teto que cada empresa escolheu, se só avisa quem opera, ou sem proteção.
+  - **Assinatura de webhook** — se toda entrega do canal precisa vir assinada com o segredo da sessão. Ligar exige que o servidor do canal assine: sem isso, a entrada de mensagens para.
+  - **Divulgação de pagamento** — se a divulgação entra na primeira mensagem ou se o envio sem ela é bloqueado e devolvido ao modelo.
+  - **Conferência de promessa** — se cada envio passa por uma conferência de modelo antes de sair.
+
+  O arquivo de ambiente continua valendo como **piso**: uma instalação que nunca abriu esta tela segue exatamente como estava, e o valor de lá só perde para o que for salvo aqui. Nada muda sozinho depois da atualização — nenhuma destas quatro chaves troca de valor sem alguém salvar na tela.
+
+  Quem não é administrador da instalação não vê a tela, e cada salvamento fica registrado na auditoria com autor e hora.
+
+- **Perguntar à IA sobre um caso antes de decidir** Quando o atendimento automático trava, o sistema abre um caso e chama alguém da equipe. Até
+  agora essa pessoa só tinha o que a IA escreveu na abertura: um título, um resumo e o que ficou
+  faltando. Se ela quisesse entender mais, tinha de sair do caso, abrir a conversa no Inbox e ler
+  tudo de novo — ou decidir sem entender.
+
+  Agora dá para **perguntar**, ali mesmo, para a mesma IA que abriu aquele caso: "por que você
+  não resolveu sozinha?", "o que o cliente já tentou?", "ele já pediu isso antes?". Ela lê o
+  caso, o que a equipe já decidiu, a conversa com o cliente e a memória do atendimento, e
+  responde em português. A conversa fica guardada no caso: quem pegar o caso depois vê o que o
+  colega já perguntou, e não refaz as mesmas perguntas.
+
+  Três coisas que valem dizer, porque são escolhas e não acaso:
+
+  - **O cliente não vê nada disso.** A IA aqui só lê: não envia mensagem, não muda o caso, não
+    move ninguém no funil. Se você pedir uma ação, ela diz qual botão da tela faz aquilo.
+  - **Quem não pode ver a conversa no Inbox também não vê nada aqui.** Se a sua equipe trabalha
+    com atendimento separado por pessoa, a regra é a mesma nas duas telas.
+  - **Qual modelo responde você escolhe**, em IA › Provedores, no ponto "Conversar sobre o caso
+    com a equipe". O gasto aparece em Uso de IA como qualquer outra chamada, e o teto mensal que
+    você definiu vale aqui também.
+
+  As perguntas e respostas são apagadas junto com o resto quando um cliente pede para ser
+  esquecido, e o próprio sistema limpa as antigas depois de um ano (você pode encurtar esse prazo
+  no `.env`, com `CASE_CHAT_RETENTION_DAYS`).
+
+  Você não precisa fazer nada: a atualização já traz tudo pronto.
+
+- **Ao marcar um compromisso, dá para informar o endereço e uma observação** Na tela de novo agendamento passam a existir dois campos opcionais: o endereço (onde aquele horário acontece) e a observação (o que a equipe precisa lembrar). Os dois já existiam no banco e iam para o calendário quando preenchidos; só não havia como preenchê-los na hora de marcar. Quem já instalou não precisa fazer nada — depois de atualizar, os campos aparecem no painel.
+
+- **Uma extensão passa a abrir outras telas além de Tarefas** Até agora, o botão de uma extensão instalada só levava a um lugar: a tela de
+  Tarefas. Na prática isso deixava todas as extensões iguais por dentro — o que
+  mudava de uma para outra era só o texto.
+
+  Agora o pacote pode apontar para seis telas de trabalho: Tarefas, Conversas,
+  Funil, Contatos, Agenda e Radar. Um guia de recepção de clínica leva a pessoa
+  para as conversas de quem não remarcou; um de e-commerce leva ao funil na hora
+  de mover o negócio parado.
+
+  **O que a extensão continua não podendo fazer, e isso é de propósito:** ela não
+  escolhe um endereço. Ela pede uma porta pelo nome, de uma lista fechada, e o
+  sistema traduz esse nome no destino. Configuração, chaves de API, provedores de
+  IA, webhooks e a área de administração ficam fora da lista — uma extensão
+  orienta o trabalho, nunca leva alguém para onde a instalação guarda segredo.
+
+  **O que muda na tela de quem administra:** ao instalar, a lista de portas que a
+  extensão vai usar aparece antes de você aceitar. E uma versão nova que peça
+  portas diferentes das que a sua organização aceitou é **recusada** — ela não
+  passa a abrir telas novas em silêncio numa atualização. Quem precisa de outro
+  conjunto publica outra extensão.
+
+  **Se você já tem extensão instalada:** pacotes escritos para a versão anterior
+  do formato deixam de ser compatíveis, porque foi o próprio autor que declarou
+  até onde garantia o funcionamento. A tela de Extensões mostra o estado de cada
+  um; peça ao autor a versão atualizada. Nada é desinstalado sozinho e nenhuma
+  configuração é perdida.
+
+- **O lembrete do compromisso aceita texto próprio** Em Tipos de agendamento, cada tipo passou a ter um campo de mensagem para o
+  aviso que sai no WhatsApp antes do compromisso. Em branco, continua a frase
+  padrão. Dá para usar {{nome}}, {{titulo}}, {{dia}}, {{hora}} e {{endereco}}.
+
+- **Quem abre a conversa vê, ali mesmo, por que a IA passou o atendimento** O sistema já guardava o contexto de cada passagem do atendimento automático para uma pessoa — o
+  porquê, o que a IA já tinha tentado, o que o cliente pediu com as palavras dele e se ele chegou a
+  ser avisado. Só que ninguém via isso em lugar nenhum.
+
+  Agora vê. Dentro da conversa, logo acima do campo de digitar, aparece um cartão:
+
+  - **Por que a IA passou**, em português, e não um código técnico.
+  - **O que o cliente quer** e **as últimas palavras dele**, entre aspas, separadas do que a IA
+    concluiu — quem vai responder precisa saber o que foi DITO e o que foi INTERPRETADO.
+  - **O que a IA já tentou**, em lista numerada, para ninguém repetir a mesma oferta.
+  - **Se o cliente já foi avisado** de que uma pessoa vai assumir. E, quando não foi, por quê — é isso
+    que muda a primeira frase que você digita.
+  - Um botão **"Assumir e responder"**, que é o mesmo gesto do topo da conversa.
+
+  Três cuidados que valem ser ditos:
+
+  - **Quando o cliente parece ter pedido para parar de receber mensagens**, o cartão muda: ele não
+    convida a responder, e sim a abrir a ficha do contato para confirmar o bloqueio. Um botão que diz
+    "responder" ali empurraria alguém a escrever justamente para quem pediu silêncio.
+  - **Se a conversa já tem dono**, o cartão diz quem está atendendo em vez de oferecer um botão que
+    não funcionaria.
+  - **Se o cliente pediu para ser esquecido**, o cartão mostra só o aviso de anonimização. Nada do que
+    ele disse sobrevive ali.
+
+  **A conversa esquecida volta a pedir.** Antes, se a IA passasse um atendimento e ninguém aparecesse,
+  não havia nada no sistema que cobrasse — o cliente esperava indefinidamente. Agora, passado um dia
+  sem ninguém assumir, o aviso volta para a Central apontando para a conversa. Ele insiste no máximo
+  três vezes: alarme que nunca cala ensina a ignorar o alarme certo.
+
+  **E dá para saber se isso está funcionando.** Em *Métricas*, junto de "Passagens para humano",
+  nasceu **"Clientes que repetiram depois da passagem"**: de cada dez passagens em que o cliente voltou
+  a falar, quantas ele teve de repetir o que já tinha dito. Se o contexto está chegando a quem assume,
+  esse número cai. Se não está, ele não muda — e aí a novidade acima é só enfeite. Quem atende vê o
+  número das conversas dele; quem gerencia vê o da organização inteira.
+
+  Você não precisa fazer nada: a atualização já traz tudo pronto.
+
+- **Você pode mandar os e-mails do sistema pelo seu próprio servidor** Convite de equipe, entrega de dados de LGPD e aviso de prazo podem sair pelo seu próprio servidor de e-mail, em vez de depender de um serviço externo contratado à parte. Quem instala numa VPS deixa de precisar abrir conta em outro lugar para mandar o primeiro convite.
+
+  Quem já manda e-mail hoje **não precisa fazer nada**: o caminho anterior continua igual, e nada muda até você decidir preencher a tela nova. Os dois convivem — enquanto a tela de e-mail estiver vazia, a entrega segue pelo serviço que você já usa.
+
+  Para ligar: entre em **Admin › E-mail**, preencha o endereço do servidor, a porta, a segurança, o usuário, a senha e o remetente, e use o botão de testar conexão antes de salvar. A partir daí a entrega passa a sair por ele. A senha é guardada cifrada, e a tela nunca a mostra de volta.
+
+  Quem prefere configurar pelo arquivo do servidor, sem abrir a tela, tem as variáveis `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` e `SMTP_FROM_NAME` documentadas no `.env.example` — o que estiver na tela vale acima do arquivo.
+
+  Crédito: @betoarts.
+
+- **A tela que liga o aviso no WhatsApp, prova que ele funciona e diz quando ele não vai sair** O aviso no WhatsApp da equipe já existia por dentro, mas só se ligava mexendo no banco.
+  Agora ele tem uma tela: **IA › Acompanhar o agente › Aviso no WhatsApp**, para quem
+  administra a conta.
+
+  Nela você escolhe por qual número o aviso sai, digita o número da equipe que vai receber,
+  dá um apelido a ele ("Plantão da Ana") e liga. E tem um botão **Enviar aviso de teste**
+  que manda uma mensagem de verdade naquele instante — se ela chegou, está funcionando; se
+  não chegou, a tela diz o motivo em português, sem código nenhum.
+
+  A parte mais útil talvez seja o que a tela diz **antes** de você ligar. Ela avisa quando:
+
+  - você ainda não conectou nenhum número, ou só tem números que não servem para avisar a
+    equipe (os oficiais só falam com quem falou com você nas últimas 24 horas);
+  - este sistema ainda não tem um endereço na internet — aí o link do aviso não abriria nada,
+    e o botão fica travado até quem instalou resolver isso;
+  - o número escolhido é o mesmo que fala com seus clientes (funciona, mas um número só para
+    avisos é mais seguro);
+  - nenhum assistente está autorizado a abrir casos, ou todos eles só sugerem respostas — nos
+    dois casos nenhum aviso vai sair, e é melhor saber disso agora;
+  - o número ainda está em aquecimento, com o quanto ele já mandou hoje e o limite do dia.
+
+  Embaixo fica a lista dos últimos avisos: quando saiu, para qual número (só os quatro
+  últimos dígitos), se foi entregue e, quando não foi, por quê — com um link que abre o
+  atendimento. E, quando houver casos suficientes, uma comparação do tempo que a equipe leva
+  para agir nos casos em que o aviso chegou e nos que não chegou.
+
+  Uma coisa que a tela diz com essas palavras, para ninguém achar que é defeito: **as respostas mandadas para aquele número são ignoradas de propósito**. Ele é só da equipe.
+  A tela mostra quantas já foram ignoradas e quando foi a última.
+
+  Você não precisa fazer nada agora. Nada muda para quem não ligar o aviso.
+
+### Alterado
+
+- **Endereço próprio de IA passa a exigir a chave da própria empresa também no atendimento** Em Agente de IA › Provedores, quem administra uma empresa pode apontar um ponto de IA para um endereço próprio — um gateway compatível ou um serviço alternativo. Quando essa empresa não tinha chave cadastrada e validada para o provedor do ponto, o sistema usava a chave de IA da instalação, a que paga a conta de todas as empresas do servidor, e a enviava para esse endereço. Numa instalação com várias empresas, era a chave do dono do servidor saindo para um endereço escolhido por uma delas.
+
+  A leitura de imagens já recusava essa combinação desde a versão 1.29.0. Agora as chamadas de IA do atendimento recusam também — identificar a etapa do lead, barrar manipulação, resumir e fechar a conversa e os demais pontos que aceitam endereço próprio. A chamada é recusada antes de sair do servidor, um aviso crítico abre na Central dizendo qual ponto corrigir e como, e a tela de Execuções mostra o motivo. Empresa sem endereço próprio não percebe diferença, e empresa com endereço próprio e chave própria cadastrada continua funcionando como antes.
+
+- **Marcar compromisso passa a ter um só campo para escolher o cliente** O painel de novo agendamento tinha um campo para buscar e outro para escolher quem seria atendido. Os dois viraram um: digita, a lista filtra, e dá para escolher — inclusive compromisso sem cliente. Quem já instalou não precisa fazer nada.
+
+- **Ao marcar, o endereço vira uma lista que dá para filtrar e salvar** No painel de novo agendamento o endereço deixa de ser um campo solto: ao digitar, a lista filtra salas e unidades que a equipe já usou, e um endereço novo oferece a opção de salvar para os próximos horários. Os outros campos do painel passam a usar o mesmo bloco e o mesmo tamanho de rótulo. Quem já instalou não precisa fazer nada — depois de atualizar, a lista aparece sozinha.
+
+- **Cada lembrete do compromisso tem o próprio texto** Em Tipos de agendamento, o aviso no WhatsApp deixou de ser um texto só e dois
+  horários fixos. Dá para somar quantos lembretes quiser, cada um com a
+  antecedência e a mensagem dele.
+
+- **Quem assume uma conversa da IA recebe o contexto — e o aviso se resolve sozinho** O sistema já sabia guardar o contexto de cada passagem do atendimento automático para uma pessoa.
+  Agora ele **preenche** esse contexto, em todos os caminhos: quando o cliente pede um atendente,
+  quando ele parece pedir para não receber mais mensagens, quando a própria IA decide chamar alguém,
+  quando o limite de gasto com IA é atingido, quando alguém da equipe escala um caso, quando o
+  sistema detecta irritação na conversa e quando um assistente externo aciona a passagem.
+
+  O que muda, na prática:
+
+  - **Quem assume a conversa lê o porquê, o que a IA já tentou e o que o cliente pediu.**
+    Antes o aviso dizia só um código em inglês — e em metade dos caminhos nem isso.
+  - **O aviso da Central se fecha sozinho** quando alguém assume a conversa ou a devolve para o
+    automático. Antes ele ficava aberto para sempre — e, pior, um aviso aberto impedia o próximo de
+    nascer: o cliente pedia um atendente de novo e ninguém era avisado.
+  - **"O cliente já foi avisado" passou a ser verdade.** O sistema afirmava isso mesmo quando a
+    mensagem não tinha saído (canal fora do ar, número em aquecimento, canal excluído, contato sem
+    telefone). Agora ele diz o que aconteceu de verdade, e por quê — que é o que muda a primeira
+    frase que a pessoa digita ao abrir a conversa.
+  - **O aviso da Central ficou curto.** O resumo da conversa saiu de lá e foi para dentro do próprio
+    atendimento: na Central, qualquer pessoa da equipe enxerga os avisos, inclusive quem não tem
+    permissão para abrir aquela conversa.
+  - **Dois pedidos seguidos não somem mais.** Quando uma segunda passagem acontece na mesma conversa,
+    ela vira um acréscimo no aviso que já existe, em vez de ser descartada em silêncio.
+
+  Dois avisos honestos:
+
+  - **O primeiro atendimento depois desta atualização pode custar um pouco mais em IA.** As
+    instruções que a IA recebe mudaram, e a economia que reaproveita instruções repetidas recomeça do
+    zero uma vez por conta. Depois disso, volta ao normal.
+  - **Se você usa um assistente externo pelo MCP**, o campo `original_reason` saiu do registro de
+    auditoria. O texto não se perdeu: ele passou para dentro da passagem, onde o pedido de
+    esquecimento de um cliente consegue alcançá-lo — no registro de auditoria, não conseguia.
+
+  Você não precisa fazer nada: a atualização já traz tudo pronto.
+
+- **O sistema passa a guardar o contexto de cada passagem para uma pessoa** Quando o atendimento automático para e chama alguém da equipe, o sistema agora **guarda** o que
+  aconteceu ali: por que a IA passou, o que ela já tinha tentado, o que o cliente pediu com as
+  palavras dele, e se ele chegou a ser avisado de que uma pessoa ia responder.
+
+  Por enquanto isso é só o lugar onde essa informação vai morar — nada muda na sua tela ainda. As
+  próximas atualizações mostram esse contexto dentro da conversa, para quem assume não precisar ler
+  tudo de novo e o cliente não repetir o que já disse.
+
+  Duas coisas valem dizer desde já, porque são escolhas e não acaso:
+
+  - **Quem não pode ver a conversa também não vê esse contexto.** Se a sua equipe trabalha com
+    atendimento separado por pessoa, a regra é a mesma aqui.
+  - **Isso é apagado junto com o resto** quando um cliente pede para ser esquecido. E o próprio
+    sistema limpa os registros antigos depois de cinco anos — menos os de passagens que
+    **ninguém assumiu**, que nunca são apagadas por idade: uma passagem em aberto é alguém ainda
+    esperando resposta. Se quiser encurtar esse prazo, é `PASSAGEM_RETENTION_DAYS` no `.env`.
+
+  Você não precisa fazer nada: a atualização já traz tudo pronto.
+
+### Corrigido
+
+- **Apagar os dados de um cliente passa a apagar também o que a IA anotou sobre ele** Quando o atendimento automático trava e chama uma pessoa, o sistema escreve um chamado com o
+  que entendeu do problema: o título, o resumo da conversa, o que ficou faltando e um recorte do
+  que o cliente falou. Esse texto também vai para o aviso que aparece na sua Central e para o
+  assunto do pedido registrado.
+
+  Quando um cliente exercia o direito de ser esquecido, o sistema respondia que tinha apagado
+  tudo — e não tinha. Nome, telefone, conversa e mensagens sumiam; o chamado, o histórico de quem
+  respondeu, o assunto do pedido e o aviso da Central continuavam lá, com o nome da pessoa
+  legível dentro. Nenhum erro aparecia em lugar nenhum: o relatório dizia que estava feito.
+
+  Agora apaga. O que descreve a pessoa é substituído; o que conta a operação continua de pé —
+  quantos atendimentos pararam, quando abriram, quem da equipe respondeu e o que foi decidido.
+  Sua equipe não perde nenhum número, e o relatório que você entrega ao cliente quando ele pede
+  acesso aos dados passa a mostrar esses mesmos registros, que antes ficavam de fora.
+
+  Você não precisa fazer nada. A correção entra sozinha quando você atualiza.
+
+- **Dá para marcar compromisso daqui a dois meses pelo calendário** O painel de marcar só pedia os próximos 30 dias e desligava o mês seguinte quando esses dias acabavam. Quem tentava um horário mais adiante via o calendário travado e o aviso de ocupação do Google daquele recorte. Agora a busca acompanha o mês que está na tela, e a ocupação do Google é conferida nesse mês — a janela de agendamento do tipo continua valendo. Nada para configurar. Crédito: @IanCouto.
+
+- **Quem só acompanha o atendimento não consegue mais escrever o que a IA anotou sobre ele** Quando o atendimento automático trava e chama uma pessoa, o sistema abre um chamado com o que
+  a IA entendeu: o título, o resumo da conversa e o que ficou faltando para resolver. É esse
+  texto que a sua equipe lê antes de assumir. Ele nascia do robô — mas o banco de dados aceitava
+  que qualquer pessoa da sua organização o reescrevesse por fora do sistema, inclusive quem você
+  cadastrou apenas como Somente leitura. O mesmo valia para o histórico de quem assumiu cada
+  conversa: dava para inserir um registro dizendo que alguém pegou um atendimento que ninguém
+  pegou.
+
+  Agora esses três registros só são escritos pelo próprio sistema. Ler continua exatamente como
+  era: a tela de chamados, o histórico de quem assumiu a conversa e o que o agente de IA enxerga
+  não mudaram em nada. Assumir, transferir e devolver conversa também seguem funcionando igual —
+  esses botões nunca escreveram direto no banco, eles pedem ao sistema, e é o sistema que
+  registra.
+
+  Você não precisa fazer nada. A correção entra sozinha quando você atualiza.
+
+- **Cliente com e-mail na ficha passa a receber o convite do Google Agenda** Ao marcar um compromisso, o convite do Google ia só para o e-mail digitado no campo de convidado (acompanhante). O e-mail da ficha do cliente não entrava, então ele recebia o lembrete no WhatsApp e não o convite na caixa. Agora o convite vai para os dois — a ficha, quando tem e-mail, e o acompanhante, se houver. Compromissos já marcados ganham o cliente na próxima sincronização. O Google não envia convite para horário que já passou: um compromisso no passado aparece na agenda do atendente, mas ninguém recebe e-mail. Nada para configurar. Crédito: @IanCouto.
+
+- **A verificação de VPS recém-instalada passa a rodar no CI** Nada muda na sua VPS: nenhuma migration, nenhuma variável, nenhuma imagem. O que muda é o que o pipeline mede antes de a release sair — a verificação da instalação fresca (`vps-fresh-onboarding`), que existia e nunca tinha rodado em lugar nenhum, passa a rodar a cada mudança, com WAHA, Redis (a mesma tradução REST do Upstash do `docker-compose.prod.yml`) e um destino HTTP real para Resend e Nuvemshop. O primeiro dono é criado pelo mesmo `scripts/bootstrap-owner.ts` que o `install.sh` roda na sua VPS. Crédito: @webtecnica.
+
+- **Mensagem com horário em formato inesperado não se perde mais** O aviso que o WhatsApp manda ao CRM traz o horário da mensagem, quase sempre em segundos. Quando ele vinha em outra unidade — milissegundos ou nanossegundos, o que acontece quando há um intermediário entre o WhatsApp e o CRM —, o cálculo do horário estourava e o aviso inteiro falhava: a mensagem do cliente não entrava, e nada na tela dizia por quê. Agora a unidade é reconhecida pela ordem de grandeza, e um horário ausente ou sem sentido vira a hora da chegada em vez de derrubar a entrada. Nenhuma mensagem se perde por causa disso.
+
+  Contribuição de @vgamkt (#1130).
+
 ## [1.37.0] — 2026-09-19
 
 ### Adicionado
@@ -6159,7 +6451,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.37.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.37.0...v2.0.0
 [1.37.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.36.0...v1.37.0
 [1.36.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.35.1...v1.36.0
 [1.35.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.35.0...v1.35.1
