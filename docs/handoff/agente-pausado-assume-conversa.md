@@ -25,7 +25,7 @@ o que a UI diz é o que acontece na execução.
 | Causa raiz identificada | **SIM — não é o seletor** |
 | Teste que reprova o defeito | feito (vermelho observado) |
 | Correção | feita — 6 sítios |
-| Prova em tela (Playwright) | em curso |
+| Prova em tela (Playwright) | feita p/ o agente pausado; spec do domingo escrita e em execução |
 
 ## O que já se sabe do código (SHA 481c24c4, working tree limpo)
 
@@ -440,3 +440,60 @@ arquivos que não eram meus (`.gitattributes`, `hostgator-setup-kit/install.sh`)
 `git worktree list` antes de confiar em qualquer diff, e nunca use `git add -A`
 neste worktree — `.gitattributes` e `hostgator-setup-kit/install.sh` seguem
 modificados por outra sessão e não devem entrar em commit deste trabalho.
+
+---
+
+## A sonda que quase virou um achado falso (2026-08-30, depois do deploy)
+
+Depois de a v1.10.2 subir, rodei uma sonda na VPS para conferir se o código novo
+estava **dentro** das imagens em execução. Ela procurava o arquivo-fonte dentro
+do contêiner. Resultado:
+
+```
+worker  agent_id no insert de llm_calls: /app/lib/agent-engine/edge/llm/run-model-call.ts
+worker  avisarJanelaFechada:             /app/lib/agent-engine/pacing/aviso-de-janela.ts
+app     valorDeOverride:                 ← VAZIO
+```
+
+Duas linhas com achado e uma vazia lê como defeito no app. **Não era.** O
+`worker` roda `tsx` sobre os fontes, então os `.ts` estão lá; o `app` é build
+standalone do Next, onde o fonte virou chunk compilado e nenhum `.ts` solto
+existe. A sonda mediu a **forma do artefato**, não o código — e o sucesso
+parcial dela nos outros dois alvos foi justamente o que a fez parecer calibrada.
+
+A régua que vale nos dois, porque não depende da forma:
+
+```bash
+# 1) de que commit saiu a imagem que está rodando?
+ssh hg-vps 'docker inspect $(docker ps --filter "label=com.docker.compose.service=app" -q | head -1) \
+  --format "{{index .Config.Labels \"org.opencontainers.image.revision\"}}"'
+# 2) esse commit contém o conserto?
+git merge-base --is-ancestor <sha-do-conserto> <revision> && echo CONTEM
+```
+
+Medido: `rev=d0b6200c` nas duas imagens, que é a tag `v1.10.2`, e
+`git grep valorDeOverride d0b6200c` devolve 1 ocorrência em
+`lib/ai/pacing-knobs.ts` e 3 em `components/connections/AntiBanSheet.tsx`.
+**O conserto está nas imagens em execução.**
+
+Armadilha irmã na mesma hora: rodei `git grep valorDeOverride HEAD` e deu vazio.
+`HEAD` aqui é `fix/agente-pausado-nao-atende` (o PR #408, antigo) — régua errada,
+não ausência. O conserto do domingo nasceu em `fix/agente-mudo-deixa-rastro`.
+
+## Prova em tela do conserto do domingo
+
+O conserto do Switch subiu para a VPS **sem** prova de tela — o unitário
+`tests/unit/anti-ban-nao-congela-o-padrao.test.ts` cobre a regra pura e tem uma
+cerca que lê o `AntiBanSheet.tsx`, mas cerca de texto não prova que o valor que
+sai da TELA chega ao BANCO como `null`. Entre a função e a linha há formulário,
+mutation, rota e Zod.
+
+Spec escrita: `tests/e2e/protecao-de-envio-nao-congela-o-padrao.spec.ts`, com as
+duas direções — salvar sem tocar no Switch tem de virar `null`; desligar o
+domingo de verdade tem de virar `false`. Sem a segunda, um "conserto" que
+devolvesse `null` sempre passaria, e o Switch viraria decorativo.
+
+**Não foi feita na instalação do dono**, de propósito: a tela exige login, e
+entrar na produção dele com a identidade dele não é prova que se peça a um
+agente. O ambiente é o build local em modo produção sobre Supabase local, com o
+MESMO código de `v1.10.2`.

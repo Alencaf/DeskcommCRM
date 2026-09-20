@@ -87,6 +87,7 @@ import { matchesHandoffKeyword } from './agent-config';
 import { msAteAJanelaAbrir } from './janela-de-atendimento';
 import { janelaDeEnvioAberta, proximaAberturaDaJanela } from '../pacing/engine';
 import { loadChannelKnobs } from '../pacing/store';
+import { avisarJanelaFechada, resolverAvisoDeJanela } from '../pacing/aviso-de-janela';
 import { resolveTurnAgent } from './resolve-turn-agent';
 import {
   hasOpenCaseForContact,
@@ -1157,7 +1158,48 @@ async function executarTurnoDoAgente(
         timezone: knobs.timezone,
         abertura: abertura.toISOString(),
       });
+      // O adiamento deixa RASTRO VISÍVEL. Sem isto, o único registro de que o
+      // número está calado morre no log do contêiner — e foi assim que uma
+      // instalação passou um domingo inteiro muda, com todos os contêineres
+      // `healthy` e o dono sem nada para olhar. Um aviso por canal, deduplicado
+      // enquanto durar o silêncio; ver o cabeçalho de `aviso-de-janela.ts`.
+      //
+      // Fire-and-forget: telemetria nunca derruba um turno que já decidiu o que
+      // fazer com a mensagem do cliente — e o job JÁ foi reagendado acima.
+      try {
+        const criados = await avisarJanelaFechada(pool, {
+          tenantId,
+          channelSessionId: input.channelSessionId,
+          abertura,
+          janela: `${knobs.windowStartHour}h-${knobs.windowEndHour}h`,
+          timezone: knobs.timezone,
+          domingoDesligado: !knobs.allowSunday,
+        });
+        if (criados > 0) {
+          runLog.info('aviso de janela fechada aberto na Central', {
+            channel_session_id: input.channelSessionId,
+          });
+        }
+      } catch (err) {
+        runLog.warn('não consegui abrir o aviso de janela fechada', {
+          error: (err instanceof Error ? err.message : String(err)).slice(0, 120),
+        });
+      }
       throw new JobSettledError('fora da janela anti-ban — job reagendado para a abertura da janela');
+    }
+    // A janela está ABERTA: se havia aviso de silêncio pendurado, ele morre
+    // AQUI — no mesmo ponto que o abriu. Um aviso que só o humano fecha vira
+    // dívida: na segunda o número volta a atender e o painel seguiria dizendo
+    // que está calado.
+    try {
+      await resolverAvisoDeJanela(pool, {
+        tenantId,
+        channelSessionId: input.channelSessionId,
+      });
+    } catch (err) {
+      runLog.warn('não consegui resolver o aviso de janela fechada', {
+        error: (err instanceof Error ? err.message : String(err)).slice(0, 120),
+      });
     }
   }
 
@@ -2617,6 +2659,11 @@ async function executarTurnoDoAgente(
       tenantId,
       leadId,
       jobId: job.id,
+      // De quem é esta execução. Vai para `llm_calls.agent_id` e é o que permite
+      // a aba "Execuções" da tela do agente mostrar o que ELE fez — antes ela
+      // lia `ai_agent_runs`, tabela que motor nenhum vivo escreve, e dizia
+      // "Nenhuma execução ainda" com o agente respondendo no WhatsApp.
+      agentId: agentConfig?.agentId ?? null,
       purpose: 'agent_turn',
       system,
       messages: openingMessages,
