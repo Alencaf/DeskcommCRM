@@ -13,6 +13,11 @@ ENV APP_VERSION=$APP_VERSION
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 COPY package.json pnpm-lock.yaml ./
+# `package.json` declara `pnpm.patchedDependencies`, e o pnpm lê o arquivo do
+# patch durante o `install` — não no `postinstall`. Sem esta linha ele morre com
+# ENOENT em `patches/@react-pdf__hyphenate.patch` e a imagem não nasce.
+# `Dockerfile` e `Dockerfile.worker` já copiam; esta era a única que não copiava.
+COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 
 COPY . .
