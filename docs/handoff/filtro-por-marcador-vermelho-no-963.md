@@ -108,3 +108,103 @@ Commit de experimento na branch, **para reverter depois**. Mede o mecanismo, nã
 `https://github.com/saraivabr/DeskcommCRM.git HEAD:saraiva/social-native`, nunca para
 `origin` (lá ele cria uma branch nova e o trabalho não chega ao PR). Um experimento
 anterior já foi revertido (`eb86b07d0`); `InboxFilters.tsx` bate byte a byte com a base.
+
+---
+
+# Continuação — o #963 depois do diagnóstico (2026-09-20)
+
+> Escrito porque o terminal que coordenava morreu **duas vezes** com resultado
+> não entregue. Se você está retomando isto, leia daqui.
+
+## O caso 131 está resolvido, e a hipótese que o resolveu não era a certa
+
+A ablação do `captura()` rodou: **A e B verdes, diferença ZERO**. O
+`page.screenshot({fullPage:true})` **não** era o gatilho — a hipótese (5) morreu.
+O que explicava era um defeito de produto determinístico, achado no caminho:
+
+**O `pb-20` reservava o rodapé em TODA rota, e no Inbox o atalho que ele reserva
+nem monta.** O grid de lá descontava 48px, o `<main>` gastava 104px: 56px de
+rolagem morta, com o campo de envio abaixo da dobra, em toda instalação. A guarda
+de rota tirava o aside e **deixava o padding**.
+
+Hipótese que morre apontando a causa certa vale mais que hipótese que sobrevive
+sem apontar nada.
+
+## O conserto NÃO foi o que eu tinha escrito primeiro
+
+A primeira versão criava uma fonte única para a regra de **rota**
+(`lib/layout/atalho-de-mensagens.ts`). Ela foi **descartada**: a main já tinha
+`lib/ui/rodape-ocupado.tsx`, uma fonte única para a **ocupação** — e ocupação é a
+grandeza certa, rota era proxy dela. Duas fontes para "quanto o rodapé ocupa"
+seria reproduzir a doença ao curá-la.
+
+O conserto vigente: o `FloatingInbox` declara `ATALHO_DE_MENSAGENS` e chama
+`usePecaDoRodape` (molde: `components/voice/ActiveCallPanel.tsx`). O hook
+desregistra ao desmontar — quem tira o atalho tira a reserva no MESMO ato.
+
+**E havia um segundo defeito, que só aparece depois do primeiro ser consertado:**
+o `calc` do Inbox continuava certo só enquanto nenhuma peça se registra. Com o
+painel de chamada de voz aberto (80px), os mesmos 56px voltam — agora
+intermitentes. O grid passou a espelhar o que a casca aplica.
+
+## O que o CI pegou e eu não
+
+**A cascata de LGPD quebrou por minha causa.** `create or replace` troca o corpo
+INTEIRO: o apêndice desta branch redefinia `fn_lgpd_cascade_redact_contact` a
+partir de uma versão anterior e, entrando depois da main, apagou em silêncio o
+passo `sales`. Anonimizar devolveria SUCESSO com o texto da comanda legível.
+
+Eu tinha somado as duas tabelas na **lista** do invariante e achei resolvido. A
+lista é declaração; o corpo da função é o que executa.
+
+**A conferência que faltou, e que agora é obrigatória a cada merge da main:**
+
+```bash
+u=$(grep -n 'CREATE OR REPLACE FUNCTION "public"."fn_lgpd_cascade_redact_contact"' <baseline> | cut -d: -f1 | tail -1)
+awk -v i="$u" 'NR>=i' <baseline> | awk '/^\$\$;/{exit} {print}' \
+  | grep -oE "v_counts \|\| jsonb_build_object\('[a-z_]+'" | sort -u
+```
+
+Compare main × merge: **"só na main" tem de ser vazio**.
+
+## Numeração: ela envelhece entre medir e aplicar
+
+0359-0362 → **0368-0371**, carimbos a partir de `20260921030000`. O teto mudou
+**três vezes em poucas horas** (0365 → 0366 → 0367). Quem mesclar, re-derive.
+
+**Armadilha que um `sed` teria estragado:** "0359" também é a cascata da comanda,
+que é da main. Troque por **par completo** (`carimbo_NNNN_slug`) e, nas menções
+soltas, uma a uma por contexto. No MANIFEST o carimbo e o nome estão em colunas
+separadas — lá o discriminador é o slug.
+
+## O que está ABERTO
+
+**Duplicação de nó.** Cinco testids de telas diferentes resolvem a dois
+elementos (`tela-agenda`, `flow-builder-shell`, `abrir-novo-tipo`,
+`opcao-modo-manual`, `opcao-modo-round_robin`) — é a **página inteira** duas
+vezes no DOM. O diff desta branch no `AppShell` é de DUAS linhas (o import e
+`<FloatingInbox />`), o PR não toca o layout, e nenhum desses testids existe
+dentro de `components/inbox/`. A causa está na MONTAGEM.
+
+Há um **commit de experimento** com o `<FloatingInbox />` desligado, para
+decidir por diferença. **Reverta-o junto com a ablação do caso 131** quando o
+resto fechar.
+
+Explicação que eu tentei e que **não se sustenta**: "o painel se esconde com
+`hidden` e mantém `ChatThread`/`Composer` (`dynamic`) montados". A `DockList` já
+é condicional a `open`, e o `DockConversation` só monta com conversa
+selecionada. Mecanismo plausível não é mecanismo medido.
+
+## Armadilhas de instrumento pagas nesta segunda metade
+
+5. **`--log-failed` traz o job inteiro.** Um `grep` por `spec.ts:N` casa toda
+   MENÇÃO e devolveu **200 casos** como se fossem falhas. A âncora que separa é
+   `✘ +[0-9]+ \[chromium\]`.
+6. **`✘` sai em run VERDE.** `degradacao-silenciosa.spec.ts:117` é catraca de
+   lacuna conhecida (`test.fail`) e o Playwright usa o mesmo símbolo. A
+   autoridade é o rodapé `N failed`; o símbolo só lista candidatos.
+7. **`grep -A N` pega a PRIMEIRA ocorrência**, não a que você procura. Abri o
+   erro de `tela-agenda` achando que era de `opcao-modo-round_robin`.
+8. **Regex não fecha parêntese aninhado.** Um extrator meu truncou
+   `max(var(),var())` no primeiro `)` e reprovou o arquivo que eu tinha acabado
+   de consertar. Conte parênteses.
