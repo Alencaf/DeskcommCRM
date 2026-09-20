@@ -254,3 +254,43 @@ Hipóteses que o achado dispensa, com a razão de cada uma:
 e o caminho é o trace: achar o instante com os dois nós e olhar o ancestral
 comum. `<body>` = portal ou raiz duplicada; `<main>` = página renderizando duas
 vezes dentro da casca.
+
+## Desfecho: o dock foi RECORTADO, e o #963 entra sem ele
+
+`e3ee70853` — `MERGEABLE`, zero vermelhos, 161 arquivos (era 166).
+
+**A razão do recorte, e ela não é "desistimos":** o defeito é do streaming do
+SSR, e os `loading.tsx` que produzem os buffers **já estão na main** (seis,
+incluindo o raiz). O dock **revela, não causa** — três arquivos de 166 estavam
+segurando quatro features prontas por uma dívida da casa.
+
+O mecanismo virou a **issue #1374**, com o comando que reproduz e a frase que
+impede a próxima pessoa de caçar no lugar errado.
+
+**O que FICOU, e a distinção separa recorte de reversão:** o `calc` do Inbox
+lendo `--rodape-ocupado`. O painel de chamada de voz continua registrando peça;
+sem isso a tela do Inbox rola quando ele aparece — o defeito existe **sem** o
+atalho. Um `git revert` teria parecido mais limpo e levado esse conserto junto,
+e o defeito voltaria na próxima chamada de voz, invisível.
+
+**O que saiu junto:** o pulo de 24px em `followup-builder:414`. Ele era do
+`<Suspense>`, medido nos dois sentidos — passa em `5ad057497` (dock ligado, sem
+boundary), falha em `e57b9ee14` (com boundary).
+
+## A armadilha que mais custou no dia inteiro
+
+**A sonda respondeu sobre um RECORTE e eu li como TOTAL.** Quatro instâncias:
+
+| instância | o que a sonda viu | o que eu publiquei |
+|---|---|---|
+| `\| head -5` nos `loading.tsx` | 5 de 6 | "cinco" |
+| duplicações de testid | 5 de 6 | "cinco" |
+| `--log-failed` + grep por spec | toda menção do job | "200 casos" |
+| 83 snapshots, zero `S:0` | tela **errada** | *(não publiquei)* |
+
+A quarta é a mais difícil porque o zero era **verdadeiro** — e sobre outra
+pergunta. Ausência de dado não é evidência de ausência.
+
+Antes de publicar contagem: *isto é o conjunto ou uma fatia?* Se o comando tem
+`head`, `tail`, `--limit`, `per_page`, ou olha um artifact/spec/branch
+específico, o número sai **com o escopo colado** ou não sai.
