@@ -359,6 +359,12 @@ if [ -n "$violations" ]; then
   echo "Nesse caso: exporte DESKCOMM_GOV_INVARIANTS_EDIT=1 e cite o flip no commit message." >&2
   echo "Válvula NÃO é necessária para editar SÓ comentário: se o diff sem comentários é vazio, o hook" >&2
   echo "libera sozinho (#1324). Se ele acusou, sobrou mudança de verdade — releia antes de exportar." >&2
+  echo "" >&2
+  echo "RESOLVENDO CONFLITO DE MERGE e caiu aqui? Então a sua resolução ficou DIFERENTE dos dois" >&2
+  echo "lados — isso é edição própria dentro do merge, e é o que este guard existe para pegar." >&2
+  echo "Caminho sem improviso: resolva ESCOLHENDO um dos lados, feche o merge, e faça a mudança" >&2
+  echo "que você queria num commit PRÓPRIO, com a razão escrita. A válvula acima é para o flip," >&2
+  echo "não para resolução — válvula usada fora do caso previsto vira válvula de rotina." >&2
   exit 1
 fi
 
