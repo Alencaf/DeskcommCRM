@@ -250,6 +250,31 @@ export const DICIONARIO: Traducoes = {
   "O serviço de envio de e-mail — próprio ou externo — fica em E-mail →": {
     es: "El servicio de envío de correo — propio o externo — está en Correo →",
   },
+  "Extensões da instalação": { es: "Extensiones de la instalación" },
+  "O que este servidor conhece, de onde veio e quem está usando. Instalar e configurar continua sendo feito dentro de cada empresa.": {
+    es: "Lo que este servidor conoce, de dónde vino y quién lo está usando. Instalar y configurar se sigue haciendo dentro de cada empresa.",
+  },
+  "De onde vêm as extensões": { es: "De dónde vienen las extensiones" },
+  "O catálogo admitido neste servidor. É a origem que o instalador aceita.": {
+    es: "El catálogo admitido en este servidor. Es el origen que el instalador acepta.",
+  },
+  "Nenhum catálogo admitido ainda — enquanto não houver, não há extensão para instalar.": {
+    es: "Ningún catálogo admitido todavía: mientras no haya, no hay extensión para instalar.",
+  },
+  "admitido em": { es: "admitido el" },
+  "impressão digital": { es: "huella digital" },
+  "Instaladas neste servidor": { es: "Instaladas en este servidor" },
+  "Cada extensão é instalada uma vez no servidor e ligada por empresa.": {
+    es: "Cada extensión se instala una vez en el servidor y se activa por empresa.",
+  },
+  "Nenhuma extensão instalada ainda.": { es: "Ninguna extensión instalada todavía." },
+  "Nenhuma empresa usa esta extensão": { es: "Ninguna empresa usa esta extensión" },
+  "empresa(s) com ela ligada": { es: "empresa(s) con ella activada" },
+  "instalada em": { es: "instalada el" },
+  "Para instalar ou configurar uma extensão, entre na empresa:": {
+    es: "Para instalar o configurar una extensión, entre en la empresa:",
+  },
+  "Extensões da empresa →": { es: "Extensiones de la empresa →" },
   "Servidor de e-mail desta instalação": { es: "Servidor de correo de esta instalación" },
   "Convite de equipe, entrega de dados de LGPD e aviso de prazo saem por aqui. Preencher esta tela é a alternativa a contratar um serviço externo de envio: o e-mail passa a sair pelo seu próprio servidor.": {
     es: "Las invitaciones al equipo, la entrega de datos personales y los avisos de plazo salen por aquí. Completar esta pantalla es la alternativa a contratar un servicio externo de envío: el correo pasa a salir por tu propio servidor.",
