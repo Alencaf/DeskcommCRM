@@ -208,3 +208,49 @@ selecionada. Mecanismo plausível não é mecanismo medido.
 8. **Regex não fecha parêntese aninhado.** Um extrator meu truncou
    `max(var(),var())` no primeiro `)` e reprovou o arquivo que eu tinha acabado
    de consertar. Conte parênteses.
+
+## A duplicação: causa achada, conserto no ar, prova pendente
+
+**PROVADO (ablação, run 35493514579):** desligar `<FloatingInbox />` no `AppShell`
+zerou as cinco duplicações — `resolved to 2 elements` de **5 para 0**, com
+**105 casos rodando** (12.6m). O PR ficou inteiro verde com a feature desligada.
+
+**O QUE O DOM MOSTROU** (`error-context.md` → `Page snapshot` do caso
+`distribuicao-atendimento`, no artifact `playwright-report-parte-2`):
+
+- o `<main>` desenhava **o INBOX** — num teste de *distribuição de atendimento*;
+- o atalho **ausente** do DOM (`grep -c "Mensagens"` no snapshot = 0);
+- **um** `<main>` só na árvore.
+
+Não é componente duplicado: é a **página anterior presa** junto com a nova, com
+o atalho suspenso naquele instante.
+
+**MECANISMO (hipótese com apoio, não medida ponta a ponta):** o atalho monta em
+toda rota **menos** `/app/inbox`, então toda saída do Inbox o traz de `null`
+para montado. Sem boundary próprio, a suspensão dele sobe até a árvore da rota e
+o App Router segura a página anterior visível. Isso explica o que mais
+incomodava — *por que duplica em telas sem relação com inbox*: é por **não**
+serem o inbox que elas montam o atalho.
+
+**CONSERTO:** `<Suspense fallback={null}>` em volta dele. Commit `0f9c0fa0d`,
+com a ablação revertida no mesmo commit. Gates locais verdes (14 casos).
+
+**O QUE NÃO ESTÁ MEDIDO, e não confunda com o que está:** o ancestral comum dos
+DOIS nós. O `Page snapshot` é tirado **depois** do timeout, quando o DOM já
+voltou a ter uma página só — e os `frame-snapshot` do trace são **incrementais**
+(contar ocorrências neles não vale; ver armadilha 1). Para ver os dois juntos é
+preciso achar o instante certo no trace.
+
+Hipóteses que o achado dispensa, com a razão de cada uma:
+
+| Hipótese | Por que não se sustenta |
+|---|---|
+| Mismatch de hidratação | o atalho estava **ausente**, não duplicado |
+| `key` do provider piscando | a árvore não remontou — a página anterior está **íntegra** |
+| Efeito colateral de import (segundo root) | o duplicado está **dentro** da casca, não no `<body>` |
+| `hidden` mantendo `dynamic` montado | `DockList` já é condicional a `open` |
+
+**Se o CI do `0f9c0fa0d` trouxer as duplicações de volta**, o boundary não basta
+e o caminho é o trace: achar o instante com os dois nós e olhar o ancestral
+comum. `<body>` = portal ou raiz duplicada; `<main>` = página renderizando duas
+vezes dentro da casca.
