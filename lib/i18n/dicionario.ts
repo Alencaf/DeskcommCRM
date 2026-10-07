@@ -11071,6 +11071,16 @@ export const DICIONARIO: Traducoes = {
 
   // ─── Tarefas (extraídas do PR #418) ───
   "Tarefas": { es: "Tareas" },
+  // ─── Tarefas pelo MCP (catálogo de capacidades do agente) ───
+  "Tarefas da equipe": { es: "Tareas del equipo" },
+  "Ver as tarefas da equipe": { es: "Ver las tareas del equipo" },
+  "Mostra as tarefas internas abertas ou concluídas da empresa, em ordem de prazo, para saber o que já foi combinado.": {
+    es: "Muestra las tareas internas abiertas o concluidas de la empresa, en orden de plazo, para saber qué ya quedó acordado.",
+  },
+  "Criar tarefa para a equipe": { es: "Crear tarea para el equipo" },
+  "Cria um lembrete de trabalho para a equipe sobre um cliente ou negócio, inclusive o pedido de uma pessoa conferir algo. Nunca envia mensagem ao cliente.": {
+    es: "Crea un recordatorio de trabajo para el equipo sobre un cliente o negocio, incluido el pedido de que una persona revise algo. Nunca envía mensajes al cliente.",
+  },
   "O que ficou combinado, com prazo. Tarefa presa a um negócio aparece na linha do tempo dele.": {
     es: "Lo que quedó acordado, con plazo. Una tarea vinculada a un negocio aparece en su línea de tiempo.",
   },

@@ -92,6 +92,11 @@ export const ALVO_DE_FUNIL: Record<string, AlvoDeFunil> = {
   // liberaria sempre, com aparência de escopado. É o teatro que o comentário
   // das ferramentas de agenda, logo abaixo, descreve.
   crm_enroll_followup_flow: "funil_vem_do_contato",
+  // Tarefa interna: `lead_id` e `contact_id` são opcionais (ao menos um). Com
+  // `lead_id`, o funil sai do negócio e o escopo vale; só com `contact_id` não
+  // há funil a checar — a tarefa não muda o card — e a chamada passa, como em
+  // `crm_schedule_followup`.
+  crm_create_task: "funil_vem_do_lead",
 
   // ---- agenda: DECLARADAS `sem_funil`, e a declaração é o ponto ----
   //
