@@ -96,6 +96,9 @@ export const ESCOPO_DAS_ESCRITAS: Readonly<Record<string, Readonly<Record<string
   crm_cancel_followup: { followup_id: "retorno" },
   crm_enroll_followup_flow: { contact_id: "contato", flow_id: "configuracao" },
 
+  // ---- tarefa interna ----
+  crm_create_task: { contact_id: "contato", lead_id: "negocio", assigned_to: "configuracao" },
+
   // ---- sem registro de cliente ----
   crm_save_org_memory: {},
 };

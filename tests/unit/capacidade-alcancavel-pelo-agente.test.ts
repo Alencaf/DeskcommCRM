@@ -123,6 +123,11 @@ const ESCRITA_QUE_E_TRABALHO_DE_ATENDENTE: ReadonlyArray<string> = [
   // grava uma linha que uma PESSOA precisa revisar e enviar (`consumed_at` só
   // depois do clique); ela não envia nada ao cliente, então não muda a casa.
   "crm_create_conversation_draft",
+  // `app/api/v1/tasks/` — POST exige `agent`. Abrir tarefa interna é o trabalho
+  // do dia de quem atende. O poder concedido é o MENOR possível: uma linha de
+  // lembrete para a equipe, que nunca fala com o cliente; a tool recusa contato
+  // pessoal ou anonimizado e alvo de outra organização, e `mode` nasce `simulate`.
+  "crm_create_task",
 ];
 
 function alcancavelPeloAgente(requiresRole: Role): boolean {
