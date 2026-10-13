@@ -214,6 +214,139 @@ export async function funilDeEntrada(
 }
 
 /**
+ * A REGRA DE ENTRADA DECLARADA PELO FUNIL — `crm_pipelines.settings.nascimento`.
+ *
+ * `{ tags_do_contato?: string[], sessoes_do_canal?: string[], origens_do_contato?: string[] }`
+ *
+ * Mora no jsonb de settings, como `reabertura` e `canonical_tags`: a OPÇÃO não
+ * precisa de migration, e o funil continua sem nome no código — quem diz "conta
+ * de laboratório entra em Gestão de Contas" é a organização, no funil dela.
+ *
+ * Lê o ESTADO do contato no momento da mensagem, não um evento: `crm_manage_tags`
+ * grava a etiqueta sem emitir `contact.tag_added`, e uma regra que dependesse do
+ * evento nunca veria a etiqueta posta por esse caminho.
+ *
+ * Camadas, da mais específica para a menos: etiqueta (quem a pessoa é) > número
+ * do canal (por onde escreveu) > origem do contato. Dois funis reclamando a mesma
+ * camada é configuração contraditória: a camada é pulada e o empate vai para o
+ * log — escolher um dos dois seria adivinhar, e o card no funil errado parece
+ * decisão de alguém.
+ */
+export type CriterioDeEntrada = "tag" | "sessao" | "origem";
+
+export interface RegraQueEscolheu {
+  tipo: CriterioDeEntrada;
+  valor: string;
+  pipeline_id: string;
+}
+
+export interface EmpateDeRegra {
+  tipo: CriterioDeEntrada;
+  funis: string[];
+}
+
+const CHAVE_DO_CRITERIO: Record<CriterioDeEntrada, string> = {
+  tag: "tags_do_contato",
+  sessao: "sessoes_do_canal",
+  origem: "origens_do_contato",
+};
+
+const normalizar = (v: unknown): string => (typeof v === "string" ? v.trim().toLowerCase() : "");
+
+function declarados(settings: unknown, criterio: CriterioDeEntrada): string[] {
+  const nascimento = (settings as { nascimento?: unknown } | null | undefined)?.nascimento;
+  if (!nascimento || typeof nascimento !== "object") return [];
+  const bruto = (nascimento as Record<string, unknown>)[CHAVE_DO_CRITERIO[criterio]];
+  return Array.isArray(bruto) ? bruto.map(normalizar).filter((v) => v !== "") : [];
+}
+
+export function escolherFunilPelaRegra(
+  funis: ReadonlyArray<{ id: string; settings: unknown }>,
+  fatos: { tags: readonly string[]; sessao: string | null; origem: string | null },
+): { escolhida: RegraQueEscolheu | null; empates: EmpateDeRegra[] } {
+  const valores: Record<CriterioDeEntrada, string[]> = {
+    tag: fatos.tags.map(normalizar).filter((v) => v !== ""),
+    sessao: fatos.sessao ? [normalizar(fatos.sessao)] : [],
+    origem: fatos.origem ? [normalizar(fatos.origem)] : [],
+  };
+  const empates: EmpateDeRegra[] = [];
+
+  for (const tipo of ["tag", "sessao", "origem"] as const) {
+    if (valores[tipo].length === 0) continue;
+    const casados = new Map<string, string>();
+    for (const funil of funis) {
+      const valor = declarados(funil.settings, tipo).find((d) => valores[tipo].includes(d));
+      if (valor !== undefined) casados.set(funil.id, valor);
+    }
+    if (casados.size === 1) {
+      const [pipeline_id, valor] = [...casados][0]!;
+      return { escolhida: { tipo, valor, pipeline_id }, empates };
+    }
+    if (casados.size > 1) empates.push({ tipo, funis: [...casados.keys()] });
+  }
+  return { escolhida: null, empates };
+}
+
+/**
+ * O destino pela regra de entrada, ou `null` para seguir a régua de sempre.
+ *
+ * ⚠️ TODA FALHA DEVOLVE `null`, a mesma doutrina de `funilDeEntrada`: leitura que
+ * falha, funil da regra sem etapa utilizável ou empate caem no funil padrão. A
+ * regra pode errar o funil; ela não pode impedir o lead de nascer.
+ */
+async function destinoPelaRegra(
+  db: SupabaseClient,
+  organizationId: string,
+  conversationId: string,
+  contato: { tags?: unknown; source?: unknown } | null,
+): Promise<{ pipelineId: string; stageId: string; regra: RegraQueEscolheu } | null> {
+  try {
+    const { data: funis, error } = await db
+      .from("crm_pipelines")
+      .select("id, settings")
+      .eq("organization_id", organizationId)
+      .eq("is_archived", false);
+    if (error || !funis) return null;
+    const comRegra = (funis as Array<{ id: string; settings: unknown }>).filter(
+      (f) => (f.settings as { nascimento?: unknown } | null)?.nascimento != null,
+    );
+    if (comRegra.length === 0) return null;
+
+    // O número só é lido quando algum funil o declara: o caso comum (regra só
+    // por etiqueta) não paga a consulta à conversa.
+    let sessao: string | null = null;
+    if (comRegra.some((f) => declarados(f.settings, "sessao").length > 0)) {
+      const { data: conversa } = await db
+        .from("conversations")
+        .select("channel_session_id")
+        .eq("organization_id", organizationId)
+        .eq("id", conversationId)
+        .maybeSingle();
+      sessao = (conversa?.channel_session_id as string | undefined) ?? null;
+    }
+
+    const tags = Array.isArray(contato?.tags) ? (contato!.tags as unknown[]).filter((t): t is string => typeof t === "string") : [];
+    const origem = typeof contato?.source === "string" ? contato.source : null;
+    const { escolhida, empates } = escolherFunilPelaRegra(comRegra, { tags, sessao, origem });
+
+    for (const empate of empates) {
+      logger.warn("nascimento-do-lead: regra de entrada ambígua, camada ignorada", {
+        organization_id: organizationId,
+        criterio: empate.tipo,
+        funis: empate.funis,
+      });
+    }
+    if (!escolhida) return null;
+
+    const stageId = await primeiraEtapa(db, organizationId, escolhida.pipeline_id);
+    if (!stageId) return null;
+    return { pipelineId: escolhida.pipeline_id, stageId, regra: escolhida };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * O destino quando a CAMPANHA declara o funil.
  *
  * Etapa declarada vale como está. Sem etapa, cai na primeira do funil — a mesma
@@ -273,7 +406,7 @@ export async function garantirLeadDaConversa(
     // `first_service_at` viaja no select que JÁ existe: decidir o funil não custa
     // uma consulta a mais no caminho quente da ingestão. É por isso que o fato
     // mora numa coluna de `contacts`, e não é derivado da agenda a cada inbound.
-    .select("is_blocked,is_personal,display_name,name,phone_number,source,source_metadata,first_service_at")
+    .select("is_blocked,is_personal,display_name,name,phone_number,source,source_metadata,first_service_at,tags")
     .eq("organization_id", organizationId)
     .eq("id", contactId)
     .maybeSingle();
@@ -315,6 +448,13 @@ export async function garantirLeadDaConversa(
   // resultado dela. Campanha sem funil declarado, ou conversa que não nasceu de
   // campanha, seguem a regra da 0262 sem diferença nenhuma.
   const origemDaCampanha = await origemDeCampanhaDaConversa(db, organizationId, conversationId);
+  // A regra declarada pelo funil vem DEPOIS da campanha (a escolha mais
+  // específica, de quem montou a lista) e ANTES do funil de clientes: ela é uma
+  // declaração explícita sobre ESTE contato, e o funil de clientes é dedução da
+  // agenda.
+  const pelaRegra = origemDaCampanha?.pipelineId
+    ? null
+    : await destinoPelaRegra(db, organizationId, conversationId, contato);
   const destino = origemDaCampanha?.pipelineId
     ? await destinoDaCampanha(
         db,
@@ -322,8 +462,9 @@ export async function garantirLeadDaConversa(
         origemDaCampanha.pipelineId,
         origemDaCampanha.stageId,
       )
-    : await funilDeEntrada(db, organizationId, ehCliente);
+    : (pelaRegra ?? (await funilDeEntrada(db, organizationId, ehCliente)));
   if ("erro" in destino) return { criado: false, motivo: destino.erro };
+  const clienteDecidiu = ehCliente && !pelaRegra;
 
   // 4 · o card.
   //
@@ -437,8 +578,12 @@ export async function garantirLeadDaConversa(
     // nasceu naquele funil. Sem esta distinção, o cliente antigo aparece num
     // quadro diferente do resto sem explicação nenhuma, e quem vê conclui que
     // alguém arrastou.
-    reason: ehCliente ? "cliente conhecido voltou a escrever" : origem.motivo,
-    payload: { conversation_id: conversationId, cliente: ehCliente },
+    reason: clienteDecidiu ? "cliente conhecido voltou a escrever" : origem.motivo,
+    payload: {
+      conversation_id: conversationId,
+      cliente: clienteDecidiu,
+      ...(pelaRegra ? { regra_de_entrada: pelaRegra.regra } : {}),
+    },
   });
   if (!registro.ok) {
     // O lead existe e é o que importa; a linha da timeline falhou. Devolver erro
