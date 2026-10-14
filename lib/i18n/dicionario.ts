@@ -11081,6 +11081,12 @@ export const DICIONARIO: Traducoes = {
   "Cria um lembrete de trabalho para a equipe sobre um cliente ou negócio, inclusive o pedido de uma pessoa conferir algo. Nunca envia mensagem ao cliente.": {
     es: "Crea un recordatorio de trabajo para el equipo sobre un cliente o negocio, incluido el pedido de que una persona revise algo. Nunca envía mensajes al cliente.",
   },
+  // ─── Consentimento pelo MCP (catálogo de capacidades do agente) ───
+  "Privacidade do cliente": { es: "Privacidad del cliente" },
+  "Registrar ou retirar o consentimento do cliente": { es: "Registrar o retirar el consentimiento del cliente" },
+  "Anota que o cliente concedeu ou retirou a autorização para um tipo de contato, com a base legal e a prova, e deixa o registro na auditoria. É uma ação de gente da equipe, nunca do assistente.": {
+    es: "Anota que el cliente concedió o retiró la autorización para un tipo de contacto, con la base legal y la prueba, y deja el registro en la auditoría. Es una acción del equipo, nunca del asistente.",
+  },
   "O que ficou combinado, com prazo. Tarefa presa a um negócio aparece na linha do tempo dele.": {
     es: "Lo que quedó acordado, con plazo. Una tarea vinculada a un negocio aparece en su línea de tiempo.",
   },
