@@ -146,6 +146,9 @@ export const ALVO_DE_FUNIL: Record<string, AlvoDeFunil> = {
   crm_resume_ai_attendance: "sem_funil",
   crm_save_org_memory: "sem_funil",
   crm_propose_contact_field: "sem_funil",
+  // Registro de consentimento por `contact_id`: não toca card nem funil, e é
+  // `apenasHumano` (papel `manager`), então nunca é montada no turno do agente.
+  crm_record_consent: "sem_funil",
   // Rascunho sugerido por integração (#1611): opera por `conversation_id`,
   // nunca `lead_id`, e não mexe em estado de funil nenhum. A barreira é OUTRA,
   // e é dela que a segurança depende: o RBAC da rota (agent+), o escopo
