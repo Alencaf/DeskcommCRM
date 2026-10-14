@@ -94,6 +94,7 @@ import {
 import { crmDraftProposal, crmPrepararProposta } from "./propostas";
 import { crmCreateTask, crmListTasks } from "./tarefas";
 import { crmRecordConsent } from "./consentimento";
+import { crmUpsertContact } from "./upsert-contato";
 
 // Cast via `unknown` porque McpToolDefinition<TInput> nao e covariante
 // em TInput (handler usa TInput em posicao contravariante). Coletar
@@ -165,6 +166,7 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmManageTags,
   crmCreateTask,
   crmRecordConsent,
+  crmUpsertContact,
   // write — organizar a operação (W4)
   crmCreateStage,
   crmUpdateStage,

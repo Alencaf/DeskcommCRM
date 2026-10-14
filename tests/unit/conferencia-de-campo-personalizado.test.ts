@@ -283,6 +283,31 @@ describe("na CRIAÇÃO (crm_create_lead, #2302) — o funil vem do argumento, n�
   });
 });
 
+describe("num CONTATO (crm_upsert_contact) — sem funil, o rótulo é a própria chave", () => {
+  it("com `semFunil` NÃO lê crm_pipelines nem crm_leads, e confere igual, com a chave como rótulo", async () => {
+    const f: FalsoBanco = {
+      inseridas: {},
+      lidas: [],
+      settings: DECIDINDO,
+      conversa: "55555555-5555-4555-8555-555555555555",
+      mensagens: [{ direction: "inbound", body: "procuro algo pequeno", created_at: "2026-09-01T10:00:00.000Z" }],
+      pipelineSettings: { fields: [{ key: "quartos", label: "Quartos", type: "number" }] },
+    };
+    const r: RespostasDoJev = { respostas: { dito_quartos: 0.2, contrario_quartos: 0.1 }, chamadas: [] };
+    const resultado = await conferirCamposPersonalizados(
+      ctxDoAgente(bancoFalso(f)),
+      { semFunil: true },
+      { quartos: 1 },
+      { ...CHAVE, fetchImpl: jev(r) },
+    );
+    expect(resultado.custom_fields).toEqual({});
+    expect(resultado.recusados[0]?.mensagem).toContain("quartos");
+    expect(resultado.recusados[0]?.mensagem).not.toContain("Quartos");
+    expect(f.lidas).not.toContain("crm_pipelines");
+    expect(f.lidas).not.toContain("crm_leads");
+  });
+});
+
 describe("fail-open — tarefa desligada, sem credencial ou provedor fora grava como hoje", () => {
   it("tarefa desligada: grava, não lê a conversa e não chama o Jev", async () => {
     const r: RespostasDoJev = { respostas: {}, chamadas: [] };

@@ -108,10 +108,15 @@ export async function mensagensPendentesDoTurno(
  * ou o funil em que ele vai nascer (`crm_create_lead`, #2297 — ainda não há
  * linha em `crm_leads` para ler).
  */
-export type AlvoDaConferencia = { leadId: string } | { pipelineId: string };
+export type AlvoDaConferencia =
+  | { leadId: string }
+  | { pipelineId: string }
+  /** Campos de um CONTATO: não há funil que dê rótulo, o rótulo é a própria chave. */
+  | { semFunil: true };
 
 /** O rótulo que o dono deu ao campo no funil — mapa vazio quando não deu para ler. */
 async function rotulosDoFunil(ctx: McpContext, alvo: AlvoDaConferencia): Promise<Map<string, string>> {
+  if ("semFunil" in alvo) return new Map();
   try {
     let settings: unknown;
     if ("pipelineId" in alvo) {
