@@ -281,6 +281,33 @@ export function ensureRole(actual: Role, minimum: Role): void {
   }
 }
 
+/** Prefixo exato do escopo que lista uma ferramenta que o token PODE chamar. */
+const TOOL_SCOPE_PREFIX = "tool:";
+
+/**
+ * Recusa por allowlist. Classe própria para o servidor auditar como
+ * `mcp.tool_denied` em vez de `mcp.tool_called`; o texto é o que o cliente lê.
+ */
+export class ToolNotAllowedError extends McpAuthError {
+  constructor(public readonly toolName: string) {
+    super(-32002, 403, `Tool '${toolName}' is not allowed for this token (tool_not_allowed).`);
+    this.name = "ToolNotAllowedError";
+  }
+}
+
+/**
+ * Allowlist por token: com ao menos um escopo `tool:<nome>`, o token só chama
+ * as ferramentas listadas. Sem nenhum, não muda nada. Só ESTREITA — a ferramenta
+ * listada ainda passa por `ensureScope` e `ensureRole`.
+ */
+export function ensureToolAllowed(scopes: string[], toolName: string): void {
+  const listadas = scopes.filter((s) => s.startsWith(TOOL_SCOPE_PREFIX));
+  if (listadas.length === 0) return;
+  if (!listadas.includes(`${TOOL_SCOPE_PREFIX}${toolName}`)) {
+    throw new ToolNotAllowedError(toolName);
+  }
+}
+
 export function ensureScope(scopes: string[], required: string): void {
   if (!scopes.includes(required)) {
     throw new McpAuthError(-32002, 403, `Token missing required scope '${required}'.`);

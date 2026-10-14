@@ -15,8 +15,15 @@ import type { z } from "zod";
 import type { ModuloOpcional } from "@/lib/instalacao/modulos";
 import type { CapacidadeDaOrganizacao } from "@/lib/organizacao/capacidades";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { auditMcpToolCall } from "./audit";
-import { McpAuthError, ensureRole, ensureScope, type McpAuthResult } from "./auth";
+import { auditMcpToolCall, auditMcpToolDenied } from "./audit";
+import {
+  McpAuthError,
+  ToolNotAllowedError,
+  ensureRole,
+  ensureScope,
+  ensureToolAllowed,
+  type McpAuthResult,
+} from "./auth";
 import { verificarTetoMcp } from "./rate-limit";
 import { allTools } from "./tools";
 import { deCapacidadeDesligada, deModuloDesligado } from "./tools/catalog";
@@ -105,6 +112,8 @@ export function createMcpServer(
               "org_suspended",
             );
           }
+          // Allowlist `tool:<nome>` do token: antes de escopo, papel e handler.
+          ensureToolAllowed(auth.scopes, tool.name);
           ensureScope(auth.scopes, tool.requiresScope);
           ensureRole(auth.role, tool.requiresRole);
 
@@ -134,6 +143,14 @@ export function createMcpServer(
         } catch (err) {
           const message = err instanceof Error ? err.message : "unknown_error";
           const durationMs = Date.now() - startedAt;
+
+          if (err instanceof ToolNotAllowedError) {
+            await auditMcpToolDenied({ ctx, toolName: tool.name });
+            return {
+              isError: true,
+              content: [{ type: "text", text: message }],
+            };
+          }
 
           await auditMcpToolCall({
             ctx,

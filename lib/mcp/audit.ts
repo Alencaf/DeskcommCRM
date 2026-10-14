@@ -54,6 +54,30 @@ function redactArgs(args: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+/**
+ * Recusa por allowlist de token (`tool:<nome>`): uma linha `mcp.tool_denied`
+ * com o nome da ferramenta e o token. Sem `args` — a chamada recusada não é
+ * dado que o servidor precise guardar.
+ */
+export async function auditMcpToolDenied(input: { ctx: McpContext; toolName: string }): Promise<void> {
+  const { ctx, toolName } = input;
+  await audit({
+    action: "mcp.tool_denied",
+    actorUserId: null,
+    actorApiTokenId: ctx.apiTokenId,
+    organizationId: ctx.organizationId,
+    resourceType: "mcp_tool",
+    resourceId: null,
+    requestId: ctx.requestId,
+    metadata: {
+      actor_type: ctx.actor.type,
+      actor_id: ctx.actor.id,
+      tool_name: toolName,
+      reason: "tool_not_allowed",
+    },
+  });
+}
+
 export async function auditMcpToolCall(input: AuditMcpToolCallInput): Promise<void> {
   const { ctx, toolName, args, durationMs, success, errorMessage, resultSummary, desfecho, motivo } =
     input;
