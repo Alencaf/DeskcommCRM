@@ -11087,6 +11087,12 @@ export const DICIONARIO: Traducoes = {
   "Anota que o cliente concedeu ou retirou a autorização para um tipo de contato, com a base legal e a prova, e deixa o registro na auditoria. É uma ação de gente da equipe, nunca do assistente.": {
     es: "Anota que el cliente concedió o retiró la autorización para un tipo de contacto, con la base legal y la prueba, y deja el registro en la auditoría. Es una acción del equipo, nunca del asistente.",
   },
+  // ─── Contato pelo MCP (catálogo de capacidades do agente) ───
+  "Fichas de clientes": { es: "Fichas de clientes" },
+  "Criar ou completar um contato pelo telefone": { es: "Crear o completar un contacto por teléfono" },
+  "Cria o cliente a partir do telefone ou completa a ficha de quem já existe, sem trocar o que já está preenchido e sem inventar números. Mexe em dados pessoais, por isso você liga esta capacidade uma a uma.": {
+    es: "Crea el cliente a partir del teléfono o completa la ficha de quien ya existe, sin cambiar lo que ya está completado y sin inventar números. Toca datos personales, por eso activas esta capacidad una por una.",
+  },
   "O que ficou combinado, com prazo. Tarefa presa a um negócio aparece na linha do tempo dele.": {
     es: "Lo que quedó acordado, con plazo. Una tarea vinculada a un negocio aparece en su línea de tiempo.",
   },

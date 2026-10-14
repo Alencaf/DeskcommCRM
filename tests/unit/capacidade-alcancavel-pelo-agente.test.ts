@@ -128,6 +128,14 @@ const ESCRITA_QUE_E_TRABALHO_DE_ATENDENTE: ReadonlyArray<string> = [
   // lembrete para a equipe, que nunca fala com o cliente; a tool recusa contato
   // pessoal ou anonimizado e alvo de outra organização, e `mode` nasce `simulate`.
   "crm_create_task",
+  // `app/api/v1/contacts/` — POST exige `agent`, e o PATCH da ficha também:
+  // criar e completar contato é trabalho de quem atende. O poder concedido é
+  // MENOR que o das rotas: a tool nunca substitui o que já está preenchido,
+  // nunca escreve consentimento, bloqueio nem conversa, nasce em `simulate`, e
+  // no turno de uma conversa só alcança o telefone do contato dela
+  // (`telefone_do_contato`). Fora do pacote `atender` e `critico` no catálogo:
+  // o dono liga uma a uma.
+  "crm_upsert_contact",
 ];
 
 function alcancavelPeloAgente(requiresRole: Role): boolean {

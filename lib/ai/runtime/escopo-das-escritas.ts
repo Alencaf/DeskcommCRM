@@ -29,6 +29,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { phoneLookupVariants } from "@/lib/channels/phone-variants";
 import { logger } from "@/lib/logger";
 
 export type DonoDoCampo =
@@ -46,6 +47,8 @@ export type DonoDoCampo =
   | "alvo_de_tag"
   /** `lead_id`: quem guarda é `negocioDaEscritaDoTurno`, em `tools.ts`. */
   | "negocio"
+  /** Telefone que é o do contato do turno, em qualquer grafia do nono dígito. */
+  | "telefone_do_contato"
   /** Não é registro de cliente: funil, etapa, usuário, fluxo. */
   | "configuracao";
 
@@ -98,6 +101,8 @@ export const ESCOPO_DAS_ESCRITAS: Readonly<Record<string, Readonly<Record<string
 
   // ---- tarefa interna ----
   crm_create_task: { contact_id: "contato", lead_id: "negocio", assigned_to: "configuracao" },
+  // ---- contato pelo telefone ----
+  crm_upsert_contact: { phone: "telefone_do_contato", person_id: "configuracao" },
 
   // ---- sem registro de cliente ----
   crm_save_org_memory: {},
@@ -148,6 +153,21 @@ async function campoEhDoContato(
     case "negocio":
     case "configuracao":
       return true;
+    case "telefone_do_contato": {
+      // Uma consulta, exista o contato ou não: número alheio, contato sem
+      // telefone e contato inexistente dão a MESMA recusa.
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("phone_number")
+        .eq("organization_id", organizationId)
+        .eq("id", contato)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      const telefone = (data as { phone_number: string | null } | null)?.phone_number;
+      if (!telefone) return false;
+      const dele = new Set(phoneLookupVariants(telefone));
+      return phoneLookupVariants(id).some((v) => dele.has(v));
+    }
     case "contato":
       return id.toLowerCase() === contato.toLowerCase();
     case "conversa":
